@@ -155,5 +155,5 @@ was used.
 
 ## Questions/Problems?
 
-Write an email to a.m.langener\[at\]rug.nl, langener95\[at\]gmail.com,
+Write an email to anna.m.langener\[at\]dartmouth.edu, langener95\[at\]gmail.com,
 or m.stadel\[at\].rug.nl
