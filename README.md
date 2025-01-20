@@ -3,14 +3,13 @@
 Here we provide a shiny app that can be used by other researchers to
 code qualitative ESM data based on a given coding scheme. It contains
 several columns showing the raw observation (see screenshots below
-“activity_open”), the given code (“Code”), and additional information
-(such as feelings or who the activity was with). Our codes have a
+“activity_open”) and the given code (“Code”). To accommodate information from different coding dimensions (e.g., company mentioned alongside activities), our app includes two additional columns for capturing such information. The first column, “Additional Information,” is intended for details about participants' feelings and the social context during activities. The second column, “Other/Comments,” can be used for any other relevant information or observations. Our codes have a
 hierarchical structure and are therefore displayed in different colors.
 
 This app was build as part of the project “Assessing Daily Life
 Activities: Comparing Predefined Categories with the Qualitative
 Analysis of Open-Ended Responses in Experience Sampling Methodology
-(ESM)” Marie Stadel, Anna Langener, Laura Bringmann.
+(ESM)” Marie Stadel, Anna M. Langener, Katie Hoemann, Laura Bringmann.
 
 ![](Images/Example_app1.jpg)
 
@@ -130,9 +129,9 @@ ppID <- 106
 
 #### 6) Indicate whether your codebook contains different levels.
 
-You can set Levels to FALSE if your codebook does not have a
+It is possible to use a hierarchical coding system with codes at multiple levels. Each level then is displayed in a different font color. You can set Levels to FALSE if your codebook does not have a
 hierarchical structure or if you do not want to display them in
-different colors.
+different colors. 
 
 ``` r
 # 6. Indicate whether your codebook contains different levels?
