@@ -14,7 +14,7 @@ Analysis of Open-Ended Responses in Experience Sampling Methodology
 
 ![](Images/Example_app1.jpg)
 
-The codes appear interactively as you type.
+To facilitate the coding process, a list of codes appears when clicking on the “Code” field, and matching codes are suggested interactively while typing.
 
 <img src="Images/Example_app2.png" width="326" />
 
