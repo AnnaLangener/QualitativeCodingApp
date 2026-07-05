@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata in this file."
+type: software
+title: "Shiny App to Code Qualitative ESM data"
+authors:
+  - given-names: Marie
+    family-names: Stadel
+  - given-names: Anna M.
+    family-names: Langener
+  - given-names: Katie
+    family-names: Hoemann
+  - given-names: Laura
+    family-names: Bringmann
+doi: 10.5281/zenodo.21043127
+license: MIT
+repository-code: "https://github.com/AnnaLangener/QualitativeCodingApp"
