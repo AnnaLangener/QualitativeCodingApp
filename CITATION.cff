@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: "QualitativeCodingApp"
+authors:
+  - family-names: Stadel
+    given-names: Marie
+  - family-names: Langener
+    given-names: Anna M.
+  - family-names: Hoemann
+    given-names: Katie
+  - family-names: Bringmann
+    given-names: Laura
+doi: 10.5281/zenodo.21043127
+repository-code: "https://github.com/AnnaLangener/QualitativeCodingApp"
+url: "https://github.com/AnnaLangener/QualitativeCodingApp"
+license: MIT
+version: 1.0.0
