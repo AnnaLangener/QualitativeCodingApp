@@ -10,7 +10,6 @@ library(DT)
 library(stringr)
 library(bslib)
 library(shinycssloaders)
-library(stringi)
 
 # This shiny app can be used for coding activities
 
