@@ -6,19 +6,21 @@
 
 library(dplyr)
 library(readxl)
+library(tcltk)
 
 # This shiny app can be used for coding activities
 
 # 1. Select the folder in which the codebook is stored and the results will be saved
-# CHANGE TO WHERE YOUR SURFDRIVE FOLDER IS LOCATED
-Projectwd <- "C:/Users/Jenni/Nextcloud/ESMOT-Qq_ProjectFolder/ESMOT-BigQ/"
+Projectwd <- tk_choose.dir(default = "", caption = "Select directory")
+Projectwd <- paste0(Projectwd,"/")
 
 # 2. Select the coding scheme 
 Codebook <- "Inductive coding/Codebook_ShinyApp_02042026.xlsx" # DON'T CHANGE
-Codebook_Act <- read_excel(paste(Projectwd,Codebook,sep ="")) # DON'T CHANGE
+Codebook_Act <- read_excel(file.path(Projectwd, Codebook)) # DON'T CHANGE
 
 # 3. Read in data 
-data <- read_excel("20250819_Swinging_Moods_ESM_data_anonymized.xlsx") # DON'T CHANGE
+data_path <- "20250819_Swinging_Moods_ESM_data_anonymized.xlsx"
+data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
 
 # The dataframe should be sorted by Date, to allow for context coding
 # DON'T CHANGE
@@ -86,8 +88,8 @@ if(Levels == TRUE){
 ######## Data Storage ##########
 
 # Here we check if the specified user already has a subfolder
-if(!file.exists(paste(Projectwd,"Inductive coding/",User, sep = ""))){
-  dir.create(paste(Projectwd,"Inductive coding/",User, sep = ""))
+if(!file.exists(file.path(Projectwd,"Inductive coding/", User))){
+  dir.create(file.path(Projectwd,"Inductive coding/", User))
 }
 
 # Next we prepare the dataframe for the selected participant

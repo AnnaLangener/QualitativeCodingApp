@@ -4,28 +4,30 @@
 
 library(dplyr)
 library(readxl)
+library(tcltk)
 
 # This shiny app can be used for coding activities
 
 # 1. Select the folder in which the codebook is stored and the results will be saved
-# CHANGE TO WHERE YOUR SURFDRIVE FOLDER IS LOCATED
-Projectwd <- "C:/Users/mstadel/Nextcloud/ESMOT-Qq_ProjectFolder/ESMOT-Smallq/"
+Projectwd <- tk_choose.dir(default = "", caption = "Select directory")
+Projectwd <- paste0(Projectwd,"/")
 
 # 2. Select the coding scheme 
 Codebook_Thought <- "Codebooks/Thoughts_Delespaul1995.csv" # DON'T CHANGE
-Codebook_Act_Thought <- read.csv(paste(Projectwd,Codebook_Thought,sep ="")) # DON'T CHANGE
+Codebook_Act_Thought <- read.csv(file.path(Projectwd, Codebook_Thought)) # DON'T CHANGE
 
 Codebook_Activity <- "Codebooks/Activities_ATUS2024.csv" # DON'T CHANGE
-Codebook_Act_Activity <- read.csv(paste(Projectwd,Codebook_Activity,sep ="")) # DON'T CHANGE
+Codebook_Act_Activity <- read.csv(file.path(Projectwd, Codebook_Activity)) # DON'T CHANGE
 
 Codebook_Location <- "Codebooks/Locations_Stadel2024.csv" # DON'T CHANGE
-Codebook_Act_Location <- read.csv(paste(Projectwd,Codebook_Location,sep ="")) # DON'T CHANGE
+Codebook_Act_Location <- read.csv(file.path(Projectwd, Codebook_Location)) # DON'T CHANGE
 
 Codebook_Company <- "Codebooks/SocialContext_Delespaul1995.csv" # DON'T CHANGE
-Codebook_Act_Company <- read.csv(paste(Projectwd,Codebook_Company,sep ="")) # DON'T CHANGE
+Codebook_Act_Company <- read.csv(file.path(Projectwd, Codebook_Company)) # DON'T CHANGE
 
 # 3. Read in data 
-data <- read_excel("20250819_Swinging_Moods_ESM_data_anonymized.xlsx") # DON'T CHANGE
+data_path <- "20250819_Swinging_Moods_ESM_data_anonymized.xlsx"
+data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
 
 # The dataframe should be sorted by Date, to allow for context coding
 # DON'T CHANGE
@@ -140,8 +142,8 @@ if(Levels_Company == TRUE){
 ######## Data Storage ##########
 
 # Here we check if the specified user already has a subfolder
-if(!file.exists(paste(Projectwd,User, sep = ""))){
-  dir.create(paste(Projectwd,User, sep = ""))
+if(!file.exists(file.path(Projectwd, User))){
+  dir.create(file.path(Projectwd, User))
 }
 
 # Next we prepare the dataframe for the selected participant
