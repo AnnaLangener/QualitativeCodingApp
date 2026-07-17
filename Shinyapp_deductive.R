@@ -137,7 +137,8 @@ if(!file.exists(file.path(Projectwd, User))){
 }
 
 # Next we prepare the dataframe for the selected participant
-Act_participant <- Data[Data[id_column] == ppID,] # 326, 317, 318, 316, 309
+Act_participant <- Data |>
+  filter(.data[[id_column]] == ppID) # 326, 317, 318, 316, 309
 
 # If the participant is selected for the first time we create an empty dataframe
 if(!file.exists(paste(Projectwd,User,"/Act_",ppID,".csv",sep = ""))){
