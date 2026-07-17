@@ -62,8 +62,11 @@ Act_participant <- Data[Data[id_column] == ppID,] # 326, 317, 318, 316, 309
 
 # If the participant is selected for the first time we create an empty dataframe
 if(!file.exists(paste(Projectwd,"Inductive coding/",User,"/Act_",ppID,".csv",sep = ""))){
-  Empty <- data.frame(`Familiarization note: beep` = rep(NA,nrow(Act_participant)),
-                      `Familiarization note: day` = rep(NA,nrow(Act_participant)))
+  Empty <- data.frame(
+    `Familiarization note: beep` = rep(NA,nrow(Act_participant)),
+    `Familiarization note: day` = rep(NA,nrow(Act_participant)),
+    `Proposed event code` = rep(NA, nrow(Act_participant))
+    )
   write.csv(Empty, paste(Projectwd,"Inductive coding/", User,"/Act_",ppID,".csv",sep = ""))
 }
 
