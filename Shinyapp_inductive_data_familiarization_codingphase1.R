@@ -58,69 +58,6 @@ library(dplyr)
 library(shiny)
 library(stringi)
 
-#######
-
-######### Create different colors for levels #########
-# Here we create a dataframe that colors the different levels in the dropdown menu (if levels are included)
-# if(Levels_Thought == TRUE){
-#   Codebook_Act_Thought <- Codebook_Act_Thought[,colnames(Codebook_Act_Thought) %in% c("Level","Code")]
-#   t1_Thought <- Codebook_Act_Thought %>%
-#     mutate(html=ifelse(Level == '1', 
-#                        paste0("<span style='color:#9F73AB';>", Code, "</span>"),
-#                        ifelse(Level == '2',
-#                               paste0("<span style='color:#19376D';>", Code, "</span>"),
-#                               paste0("<span style='color:#0C7B93';>", Code, "</span>")
-#                        )
-#     ))
-#   Codebook_Act_Thought <- setNames(t1_Thought$Code, t1_Thought$html)
-# }else{
-#   Codebook_Act_Thought <- Codebook_Act_Thought$Code
-# }
-# 
-# if(Levels_Activity == TRUE){
-#   Codebook_Act_Activity <- Codebook_Act_Activity[,colnames(Codebook_Act_Activity) %in% c("Level","Code")]
-#   t1_Activity <- Codebook_Act_Activity %>%
-#     mutate(html=ifelse(Level == '1', 
-#                        paste0("<span style='color:#9F73AB';>", Code, "</span>"),
-#                        ifelse(Level == '2',
-#                               paste0("<span style='color:#19376D';>", Code, "</span>"),
-#                               paste0("<span style='color:#0C7B93';>", Code, "</span>")
-#                        )
-#     ))
-#   Codebook_Act_Activity <- setNames(t1_Activity$Code, t1_Activity$html)
-# }else{
-#   Codebook_Act_Activity <- Codebook_Act_Activity$Code
-# }
-# 
-# if(Levels_Location == TRUE){
-#   Codebook_Act_Location <- Codebook_Act_Location[,colnames(Codebook_Act_Location) %in% c("Level","Code")]
-#   t1_Location <- Codebook_Act_Location %>%
-#     mutate(html=ifelse(Level == '1', 
-#                        paste0("<span style='color:#9F73AB';>", Code, "</span>"),
-#                        ifelse(Level == '2',
-#                               paste0("<span style='color:#19376D';>", Code, "</span>"),
-#                               paste0("<span style='color:#0C7B93';>", Code, "</span>")
-#                        )
-#     ))
-#   Codebook_Act_Location <- setNames(t1_Location$Code, t1_Location$html)
-# }else{
-#   Codebook_Act_Location <- Codebook_Act_Location$Code
-# }
-# 
-# if(Levels_Company == TRUE){
-#   Codebook_Act_Company <- Codebook_Act_Company[,colnames(Codebook_Act_Company) %in% c("Level","Code")]
-#   t1_Company <- Codebook_Act_Company %>%
-#     mutate(html=ifelse(Level == '1', 
-#                        paste0("<span style='color:#9F73AB';>", Code, "</span>"),
-#                        ifelse(Level == '2',
-#                               paste0("<span style='color:#19376D';>", Code, "</span>"),
-#                               paste0("<span style='color:#0C7B93';>", Code, "</span>")
-#                        )
-#     ))
-#   Codebook_Act_Company <- setNames(t1_Company$Code, t1_Company$html)
-# }else{
-#   Codebook_Act_Company <- Codebook_Act_Company$Code
-# }
 ######## Data Storage ##########
 
 # Here we check if the specified user already has a subfolder
