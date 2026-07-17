@@ -124,7 +124,7 @@ if(Levels == TRUE){
   )
 }
 
-server <- function(session, input, output){
+server <- function(input, output, session){
   
   ###################### Create Datatable #####################
   #############################################################

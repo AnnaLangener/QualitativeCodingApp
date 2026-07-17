@@ -180,7 +180,7 @@ if(Levels_Thought == TRUE){
   )
 }
 
-server <- function(session, input, output){
+server <- function(input, output, session){
   
   ###################### Create Datatable #####################
   #############################################################

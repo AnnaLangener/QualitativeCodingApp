@@ -76,7 +76,7 @@ ui <- navbarPage("Qualitative Coding",
                           withSpinner(DT::dataTableOutput('Act_participant'))),
 )
 
-server <- function(session, input, output){
+server <- function(input, output, session){
   
   ###################### Create Datatable #####################
   #############################################################
