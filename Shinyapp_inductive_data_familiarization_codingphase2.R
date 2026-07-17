@@ -29,7 +29,7 @@ data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
 
 # The dataframe should be sorted by Date, to allow for context coding
 # DON'T CHANGE
-Data <- data %>% 
+Data <- data |> 
   dplyr::select(Participant_ID, 
                 #Beep_ID, 
                 Day, Obs, Time1,
@@ -37,7 +37,7 @@ Data <- data %>%
                 Activity, 
                 Location, 
                 Company,
-                Event) %>%
+                Event) |> 
   arrange(Participant_ID, Obs)
 
 # 4. Select who is coding (a folder will be created if this is a new person)
@@ -62,7 +62,7 @@ Levels = FALSE # DON'T CHANGE
 # Here we create a dataframe that colors the different levels in the dropdown menu (if levels are included)
 if(Levels == TRUE){
   Codebook_Act <- Codebook_Act[,colnames(Codebook_Act) %in% c("Level","Code")]
-  t1 <- Codebook_Act %>%
+  t1 <- Codebook_Act |> 
     mutate(html=ifelse(Level == '1',
                        paste0("<span style='color:#9F73AB';>", Code, "</span>"),
                        ifelse(Level == '2',
@@ -137,7 +137,7 @@ server <- function(input, output, session){
     a$'Existing event code' <- sapply(paste0("selectize_wrap_event_existing",1:nrow(Act_participant)), function(x) as.character(htmltools::HTML(as.character(uiOutput(x)))))
     
     # Reorder the columns for easier coding
-    a <- a %>%
+    a <- a |> 
       dplyr::select(
         Participant_ID, Day, Obs, Time1,
         Thought, 

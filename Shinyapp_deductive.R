@@ -36,14 +36,14 @@ data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
 
 # The dataframe should be sorted by Date, to allow for context coding
 # DON'T CHANGE
-Data <- data %>% 
+Data <- data |>  
   dplyr::select(Participant_ID, 
                 #Beep_ID, 
                 Day, Obs, Time1,
          Thought, Thought_ENG, 
          Activity, Activity_ENG, 
          Location, Location_ENG, 
-         Company, Company_ENG) %>%
+         Company, Company_ENG) |> 
   # filter(if_any(ends_with("_RP"), ~ !is.na(.))) %>%
   arrange(Participant_ID, Obs)
 

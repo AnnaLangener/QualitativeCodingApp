@@ -24,7 +24,7 @@ data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
 
 # The dataframe should be sorted by Date, to allow for context coding
 # DON'T CHANGE
-Data <- data %>% 
+Data <- data |> 
   dplyr::select(Participant_ID, 
                 #Beep_ID, 
                 Day, Obs, Time1,
@@ -32,7 +32,7 @@ Data <- data %>%
                 Activity, 
                 Location, 
                 Company,
-                Event) %>%
+                Event) |> 
   arrange(Participant_ID, Obs)
 
 # 3. Select who is coding (a folder will be created if this is a new person)
@@ -91,7 +91,7 @@ server <- function(input, output, session){
     a$'Proposed event code' <- sapply(paste0("selectize_wrap_event",1:nrow(Act_participant)), function(x) as.character(uiOutput(x)))
     
     # Reorder the columns for easier coding
-    a <- a %>%
+    a <- a |> 
       dplyr::select(
         Participant_ID, Day, Obs, Time1,
         Thought, 
