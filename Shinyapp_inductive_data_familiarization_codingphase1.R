@@ -6,6 +6,12 @@
 library(dplyr)
 library(readxl)
 library(tcltk)
+library(shiny)
+library(DT)
+library(stringr)
+library(bslib)
+library(shinycssloaders)
+library(stringi)
 
 # This shiny app can be used for coding activities
 
@@ -44,19 +50,6 @@ ppID <- 10254
 
 # A lot of the code that creates the table is copied from following github question
 ## https://github.com/rstudio/shiny/issues/1246
-
-###### Load Packages
-
-library(shiny)
-library(DT)
-library(readxl)
-library(stringr)
-library(bslib)
-library(shinycssloaders)
-
-library(dplyr)
-library(shiny)
-library(stringi)
 
 ######## Data Storage ##########
 

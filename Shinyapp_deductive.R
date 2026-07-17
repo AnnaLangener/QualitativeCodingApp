@@ -5,6 +5,12 @@
 library(dplyr)
 library(readxl)
 library(tcltk)
+library(shiny)
+library(DT)
+library(stringr)
+library(bslib)
+library(shinycssloaders)
+library(stringi)
 
 # This shiny app can be used for coding activities
 
@@ -62,21 +68,6 @@ Levels_Company = FALSE # DON'T CHANGE
 
 # A lot of the code that creates the table is copied from following github question
 ## https://github.com/rstudio/shiny/issues/1246
-
-###### Load Packages
-
-library(shiny)
-library(DT)
-library(readxl)
-library(stringr)
-library(bslib)
-library(shinycssloaders)
-
-library(dplyr)
-library(shiny)
-library(stringi)
-
-#######
 
 ######### Create different colors for levels #########
 # Here we create a dataframe that colors the different levels in the dropdown menu (if levels are included)
