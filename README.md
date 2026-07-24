@@ -21,144 +21,100 @@ To facilitate the coding process, a list of codes appears when clicking on the �
 
 <img src="Images/Example_app2.png" width="326" />
 
-To use this app, please download and open the app.R file in R studio
-(<https://posit.co/download/rstudio-desktop/>). If desired, you can also
-download a codebook. We currently provide two options, one based on
-Stadel et al. 2024
-([Codebook_Stadeletal.csv](https://github.com/AnnaLangener/QualitativeCodingApp/blob/Anna_Tests/Codebook_Stadeletal.csv "Codebook_Stadeletal.csv"):
-<https://annalangener.github.io/QualitativeVis/>) and one based on
-Skimina et al. 2020
-([Codebook_Skiminiaetal.csv](https://github.com/AnnaLangener/QualitativeCodingApp/blob/Anna_Tests/Codebook_Skiminiaetal.csv "Codebook_Skiminiaetal.csv"):
-<https://annalangener.github.io/QualitativeVis/Skimina.html>). It is
-also possible to use your own codebook.
+To use this app, download the repository and open `app.R` in RStudio
+(<https://posit.co/download/rstudio-desktop/>). The consolidated app
+loads the data and mode-specific codebooks from a project folder that
+you select when starting a coding session.
 
 The app runs locally, so there are no privacy concerns when using it.
 
-## Choose a coding activity
+## Start a coding session
 
-The three coding activities can now be started from one entry point.
-Open `app.R` in RStudio and click **Run App**. On the start screen,
-choose one of the following:
+All three coding activities are available from one start screen. Open
+`app.R` in RStudio, click **Run App**, and make the following
+selections:
 
-- Deductive coding
+1. **Coding activity.** Choose **Deductive coding**, **Inductive
+   coding: Phase 1**, or **Inductive coding: Phase 2**. This determines
+   which codebook and coding fields are shown and where the results are
+   saved.
+2. **Coder (user).** Enter a name or coder ID. A new coder name creates
+   a new results folder. Reusing the same name opens that coder's
+   existing results, if present.
+3. **Participant ID.** Enter an ID exactly as it occurs in the
+   `Participant_ID` column of the data. Only that participant's
+   observations are loaded into the coding table.
+4. Click **Choose project folder and start**, then select the project
+   folder that contains the data and codebooks described below. The app
+   reads the required files from this folder; the data file itself is
+   not selected separately.
 
-- Inductive coding: Phase 1 (data familiarization)
+Both the coder and participant ID are required. Leading and trailing
+spaces are ignored. Because these values are used in folder and file
+names, they cannot contain `< > : " / \ | ? *`.
 
-- Inductive coding: Phase 2 (coding with the developing codebook)
+Use **Change coding activity** above the coding table to return to the
+start screen. This reloads the app, so the activity, coder, participant,
+and project folder can be selected again.
 
-After choosing an activity, enter the coder name and participant ID,
-then click **Choose project folder and start**. The coding table itself
-works as before. Use **Change coding activity** to return to the start
-screen.
+## Prepare the project folder
 
-Phase 1 and Phase 2 results are stored separately under
-`Inductive coding/Phase 1` and `Inductive coding/Phase 2`,
-respectively.
+Every activity reads
+`20250819_Swinging_Moods_ESM_data_anonymized.xlsx` from the root of the
+selected project folder. The data must contain a `Participant_ID`
+column. The app orders the selected data by `Participant_ID` and `Obs`
+and reports an error if the entered participant ID is not present.
 
-## How to use this app?
+All activities require the columns `Participant_ID`, `Day`, `Obs`,
+`Time1`, `Thought`, `Activity`, `Location`, and `Company`. Deductive
+coding additionally requires `Thought_ENG`, `Activity_ENG`,
+`Location_ENG`, and `Company_ENG`; both inductive phases require
+`Event`.
 
-The following sections explain the expected project setup. The coder
-and participant are selected on the start screen and do not need to be
-changed in `app.R`.
+The selected activity determines which additional files are required:
 
-#### 1) Select the folder in which the codebook is stored and the results will be saved.
+- **Deductive coding** reads these files from `Codebooks/`:
+  `Thoughts_Delespaul1995.csv`, `Activities_ATUS2024.csv`,
+  `Locations_Stadel2024.csv`, and
+  `SocialContext_Delespaul1995.csv`.
+- **Inductive coding: Phase 1** does not load a codebook.
+- **Inductive coding: Phase 2** reads
+  `Inductive coding/Codebook_ShinyApp_02042026.xlsx`.
 
-First, you need to select your project folder where you want to save
-your coding results. Ideally, this folder will also contain the file
-where your codebook is stored. This can be any folder on your computer
-or in a cloud.
+Codebooks must contain a column named `Code`. The deductive thought and
+activity codebooks must also contain a `Level` column; those levels are
+displayed in different colors.
 
-``` r
-# 1. Select the folder in which the codebook is stored and the results will be saved
-Projectwd <- "/Users/annalangener/Nextcloud/Shared/Testing Methods to Capture Social Context/Qualitative context/3. Coding/QualitativeCoding_Activies/"
+For example, the selected project folder should have this structure:
+
+``` text
+project folder/
+├── 20250819_Swinging_Moods_ESM_data_anonymized.xlsx
+├── Codebooks/
+│   ├── Thoughts_Delespaul1995.csv
+│   ├── Activities_ATUS2024.csv
+│   ├── Locations_Stadel2024.csv
+│   └── SocialContext_Delespaul1995.csv
+└── Inductive coding/
+    └── Codebook_ShinyApp_02042026.xlsx
 ```
 
-#### 2) Select the coding scheme that you want to use.
+Only the files needed for the selected coding activity have to be
+present.
 
-Next you need to read in the codebook. In this example, we use the
-Codebook_Stadeletal.csv file, but in theory you can use any codebook.
-Below we also provide sample code to read a codebook stored in an Excel
-file. The codebook should look similar to this:
+## Coder and participant result files
 
-<img src="Images/Codebook_Example.png" width="294" />
+The app creates one CSV result file per coder and participant. If that
+file already exists, it is loaded so coding can continue where it
+stopped. Otherwise, the app creates it with empty (`NA`) coding values.
 
-**Important**: The codebook must contain a column named “Code”
-containing the codes. If desired, the codebook can contain a second
-column called “Level”. This can be used if the codes have a hierarchical
-structure and you want to display them in different colors.
+The result path depends on the selected activity:
 
-``` r
-# 2. Select the coding scheme that you want to use. 
-# You can choose our proposed coding scheme, the coding scheme proposed by Skimina et al., or you own by specify the path where the codebook is stored
-# IMPORTANT: The codes need to be in a column named "Code" and if levels are included, those need to be in a column called "Level"
-#Codebook_Act <- read_excel(paste(Projectwd,"Codebook_shared_activities.xlsx",sep =""), sheet = 1)
-Codebook <- "Codebook_Stadeletal.csv" # Needed
-Codebook_Act <- read.csv(paste(Projectwd,Codebook,sep ="")) 
+``` text
+Deductive coding:          <project>/<coder>/Act_<participant>.csv
+Inductive coding: Phase 1: <project>/Inductive coding/Phase 1/<coder>/Act_<participant>.csv
+Inductive coding: Phase 2: <project>/Inductive coding/Phase 2/<coder>/Act_<participant>.csv
 ```
-
-#### 3) Select the path where the data is stored.
-
-Specify where your data is stored in your project folder. In our
-example, we created a subfolder called “Data” that contains our data
-file. See the image below for an example of how our project folder is
-structured.
-
-<img src="Images/Example_app3.png" width="332" />
-
-To be able to code “context” (e.g. someone is on vacation), the
-dataframe should be sorted by date. Below we provide sample code on how
-to do this.
-
-``` r
-# 3. Select the path where the data is stored
-Data <- read.csv(paste(Projectwd,"Data/act_coding_ALL.csv",sep = ""))[,-1]
-# The dataframe should be sorted by Date, to allow for context coding
-#Data <-  Data %>% arrange(ppID, timeStampStart)
-#write.csv(Data,paste(Projectwd,"Data/act_coding_ALL.csv",sep = ""))
-```
-
-#### 4) Select who is coding.
-
-The next step is to select who will be coding (this can be useful if
-more than one researcher is coding on a project). You can choose any
-name you like. If you choose a new username, a subfolder will
-automatically be created for that user (see image below), if an “old”
-user is selected, the previous codes will be read into the app and the
-user can continue coding where they left off. Enter this name in the
-**Coder (user)** field on the start screen.
-
-In this example, a new folder named “Example_newuser” **automatically**
-be created in our project folder to store the results for this user.
-
-<img src="Images/Example_app4.png" width="296" />
-
-#### 5) Select the participant that you want to code
-
-To reduce loading time and to be able to code the context of an
-observation, we load each participant’s data separately. Enter the
-participant to code in the **Participant ID** field on the start
-screen. The first time the participant’s data is loaded, a csv file is
-automatically created to store the coding results (until there are
-results to store, it will contain “NA”).
-
-<img src="Images/Example_app5.png" width="271" />
-
-#### 6) Indicate whether your codebook contains different levels.
-
-It is possible to use a hierarchical coding system with codes at multiple levels. Each level then is displayed in a different font color. You can set Levels to FALSE if your codebook does not have a
-hierarchical structure or if you do not want to display them in
-different colors. 
-
-``` r
-# 6. Indicate whether your codebook contains different levels?
-Levels = TRUE #FALSE
-```
-
-#### 7) Click “Run App”
-
-Lastly, you only have to click “Run App”.
-
-![](Images/Example_app6.png)
 
 ## Analyze the data
 
