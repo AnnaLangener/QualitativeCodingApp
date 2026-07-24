@@ -34,6 +34,27 @@ also possible to use your own codebook.
 
 The app runs locally, so there are no privacy concerns when using it.
 
+## Choose a coding activity
+
+The three coding activities can now be started from one entry point.
+Open `app.R` in RStudio and click **Run App**. On the start screen,
+choose one of the following:
+
+- Deductive coding
+
+- Inductive coding: Phase 1 (data familiarization)
+
+- Inductive coding: Phase 2 (coding with the developing codebook)
+
+After choosing an activity, click **Choose project folder and start**.
+The coding table itself works as before. Use **Change coding activity**
+to return to the start screen.
+
+The coder names and participant IDs for the consolidated app are
+configured near the top of `app.R`. Phase 1 and Phase 2 results are
+stored separately under `Inductive coding/Phase 1` and
+`Inductive coding/Phase 2`, respectively.
+
 ## How to use this app?
 
 The following sections explain how to set up this app. You only need to

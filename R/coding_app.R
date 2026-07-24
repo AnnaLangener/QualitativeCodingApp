@@ -17,7 +17,11 @@ choose_project_directory <- function() {
     default = "",
     caption = "Select directory"
   )
-  paste0(project_directory, "/")
+  if (is.na(project_directory) || !nzchar(project_directory)) {
+    stop("No project directory was selected.")
+  }
+
+  normalizePath(project_directory, winslash = "/", mustWork = TRUE)
 }
 
 
@@ -152,7 +156,7 @@ initialize_coding_storage <- function(
   }
 
   if (!file.exists(user_directory)) {
-    dir.create(user_directory)
+    dir.create(user_directory, recursive = TRUE)
   }
 
   coding_path <- file.path(
@@ -201,11 +205,14 @@ level_legend <- function() {
 }
 
 
-coding_ui <- function(tab_title, show_levels = FALSE, tab_intro = NULL) {
+coding_content <- function(tab_title, show_levels = FALSE, tab_intro = NULL) {
   tab_contents <- list()
 
   if (!is.null(tab_intro)) {
-    tab_contents <- append(tab_contents, list(tab_intro))
+    tab_contents <- append(
+      tab_contents,
+      list(shiny::tags$p(tab_intro))
+    )
   }
   if (show_levels) {
     tab_contents <- append(tab_contents, list(level_legend()))
@@ -220,15 +227,28 @@ coding_ui <- function(tab_title, show_levels = FALSE, tab_intro = NULL) {
     )
   )
 
-  coding_tab <- do.call(
-    shiny::tabPanel,
-    c(list(title = tab_title, id = "Week"), tab_contents)
+  do.call(
+    shiny::tags$div,
+    c(
+      list(
+        class = "coding-app-content",
+        shiny::tags$h2(tab_title)
+      ),
+      tab_contents
+    )
   )
+}
 
+coding_ui <- function(tab_title, show_levels = FALSE, tab_intro = NULL) {
   shiny::navbarPage(
     "Qualitative Coding",
     theme = bslib::bs_theme(version = 5, bootswatch = "minty"),
-    coding_tab
+    shiny::tabPanel(
+      tab_title,
+      coding_content(tab_title, show_levels, tab_intro),
+      value = "coding"
+    ),
+    id = "Week"
   )
 }
 
