@@ -33,7 +33,22 @@ load_coding_data <- function(project_directory, data_path, columns) {
 
 
 select_participant_data <- function(data, id_column, participant_id) {
-  dplyr::filter(data, .data[[id_column]] == participant_id)
+  participant_id <- trimws(as.character(participant_id))
+  participant_data <- dplyr::filter(
+    data,
+    !is.na(.data[[id_column]]) &
+      trimws(as.character(.data[[id_column]])) == participant_id
+  )
+
+  if (nrow(participant_data) == 0) {
+    stop(
+      "Participant ID '",
+      participant_id,
+      "' was not found in the selected project's data."
+    )
+  }
+
+  participant_data
 }
 
 
@@ -149,6 +164,12 @@ initialize_coding_storage <- function(
   participant_data,
   storage_columns
 ) {
+  user <- validate_storage_identifier(user, "Coder")
+  participant_id <- validate_storage_identifier(
+    participant_id,
+    "Participant ID"
+  )
+
   user_directory <- if (is.null(storage_directory)) {
     file.path(project_directory, user)
   } else {
@@ -177,6 +198,27 @@ initialize_coding_storage <- function(
   }
 
   coding_path
+}
+
+
+validate_storage_identifier <- function(value, label) {
+  value <- trimws(as.character(value))
+
+  if (
+    length(value) != 1 ||
+      is.na(value) ||
+      !nzchar(value) ||
+      value %in% c(".", "..") ||
+      grepl("[<>:\"/\\\\|?*]", value)
+  ) {
+    stop(
+      label,
+      " must be a non-empty name without these characters: ",
+      "< > : \" / \\ | ? *"
+    )
+  }
+
+  value
 }
 
 

@@ -46,20 +46,20 @@ choose one of the following:
 
 - Inductive coding: Phase 2 (coding with the developing codebook)
 
-After choosing an activity, click **Choose project folder and start**.
-The coding table itself works as before. Use **Change coding activity**
-to return to the start screen.
+After choosing an activity, enter the coder name and participant ID,
+then click **Choose project folder and start**. The coding table itself
+works as before. Use **Change coding activity** to return to the start
+screen.
 
-The coder names and participant IDs for the consolidated app are
-configured near the top of `app.R`. Phase 1 and Phase 2 results are
-stored separately under `Inductive coding/Phase 1` and
-`Inductive coding/Phase 2`, respectively.
+Phase 1 and Phase 2 results are stored separately under
+`Inductive coding/Phase 1` and `Inductive coding/Phase 2`,
+respectively.
 
 ## How to use this app?
 
-The following sections explain how to set up this app. You only need to
-change the first few lines of code in the app (Six lines in total). Here
-is a little more explanation of what you need to change.
+The following sections explain the expected project setup. The coder
+and participant are selected on the start screen and do not need to be
+changed in `app.R`.
 
 #### 1) Select the folder in which the codebook is stored and the results will be saved.
 
@@ -124,31 +124,22 @@ more than one researcher is coding on a project). You can choose any
 name you like. If you choose a new username, a subfolder will
 automatically be created for that user (see image below), if an “old”
 user is selected, the previous codes will be read into the app and the
-user can continue coding where they left off.
-
-``` r
-# 4. Select who is coding (a folder will be created if this is a new person)
-User <- "Example_newuser"  # "Marie_FullCoding", "Marie", "Anna"
-```
+user can continue coding where they left off. Enter this name in the
+**Coder (user)** field on the start screen.
 
 In this example, a new folder named “Example_newuser” **automatically**
 be created in our project folder to store the results for this user.
 
 <img src="Images/Example_app4.png" width="296" />
 
-#### 5) Indicate how your column is named that includes the participant IDs and select the participant that you want to code
+#### 5) Select the participant that you want to code
 
 To reduce loading time and to be able to code the context of an
-observation, we load each participant’s data separately. The first time
-we load a participant’s data, a csv file is automatically created to
-store the coding results (until there are results to store, it will
-contain “NA”).
-
-``` r
-# 5. Indicate how you column is named that includes the participant IDs and select the participant of interest
-id_column = "ppID" # Change the name of the column here
-ppID <- 106 
-```
+observation, we load each participant’s data separately. Enter the
+participant to code in the **Participant ID** field on the start
+screen. The first time the participant’s data is loaded, a csv file is
+automatically created to store the coding results (until there are
+results to store, it will contain “NA”).
 
 <img src="Images/Example_app5.png" width="271" />
 

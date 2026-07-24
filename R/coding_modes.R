@@ -30,8 +30,8 @@ new_coding_mode <- function(
 
 create_deductive_mode <- function(
   project_directory,
-  user = "MS",
-  participant_id = 11347
+  user,
+  participant_id
 ) {
   thought_codebook <- utils::read.csv(file.path(
     project_directory,
@@ -142,8 +142,8 @@ create_deductive_mode <- function(
 
 create_inductive_phase1_mode <- function(
   project_directory,
-  user = "JC",
-  participant_id = 10254
+  user,
+  participant_id
 ) {
   data <- load_coding_data(
     project_directory,
@@ -186,8 +186,8 @@ create_inductive_phase1_mode <- function(
 
 create_inductive_phase2_mode <- function(
   project_directory,
-  user = "JC",
-  participant_id = 27311
+  user,
+  participant_id
 ) {
   codebook <- readxl::read_excel(file.path(
     project_directory,
@@ -241,7 +241,8 @@ create_inductive_phase2_mode <- function(
 create_coding_mode <- function(
   mode,
   project_directory,
-  settings = list()
+  user,
+  participant_id
 ) {
   mode_factory <- switch(
     mode,
@@ -251,8 +252,9 @@ create_coding_mode <- function(
     stop("Unknown coding activity: ", mode)
   )
 
-  do.call(
-    mode_factory,
-    c(list(project_directory = project_directory), settings)
+  mode_factory(
+    project_directory = project_directory,
+    user = user,
+    participant_id = participant_id
   )
 }

@@ -1,14 +1,6 @@
 source(file.path("R", "coding_app.R"))
 source(file.path("R", "coding_modes.R"))
 
-# Change these values when assigning coders and participants.
-coding_settings <- list(
-  deductive = list(user = "MS", participant_id = 11347),
-  inductive_phase1 = list(user = "JC", participant_id = 10254),
-  inductive_phase2 = list(user = "JC", participant_id = 27311)
-)
-
-
 launcher_content <- function() {
   shiny::tags$div(
     class = "launcher",
@@ -32,17 +24,23 @@ launcher_content <- function() {
         selected = "deductive"
       )
     ),
+    shiny::tags$div(
+      class = "launcher-fields",
+      shiny::textInput(
+        "coder",
+        "Coder (user)",
+        placeholder = "Enter your name or coder ID"
+      ),
+      shiny::textInput(
+        "participant_id",
+        "Participant ID",
+        placeholder = "Enter the participant to code"
+      )
+    ),
     shiny::actionButton(
       "start_mode",
       "Choose project folder and start",
       class = "btn-primary btn-lg"
-    ),
-    shiny::tags$p(
-      class = "launcher-note",
-      paste(
-        "Your data stays on this computer. The selected activity",
-        "determines where results are saved."
-      )
     )
   )
 }
@@ -85,6 +83,17 @@ ui <- shiny::fluidPage(
       .mode-options label {
         width: 100%;
         cursor: pointer;
+      }
+      .launcher-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      @media (max-width: 576px) {
+        .launcher-fields {
+          grid-template-columns: 1fr;
+        }
       }
       .launcher-note {
         margin: 1rem 0 0;
@@ -129,6 +138,37 @@ server <- function(input, output, session) {
   shiny::observeEvent(input$start_mode, {
     shiny::req(input$coding_mode)
 
+    coder <- trimws(input$coder)
+    participant_id <- trimws(input$participant_id)
+
+    if (!nzchar(coder) || !nzchar(participant_id)) {
+      shiny::showNotification(
+        "Enter both a coder and a participant ID before starting.",
+        type = "warning"
+      )
+      return()
+    }
+
+    identifiers <- tryCatch(
+      list(
+        coder = validate_storage_identifier(coder, "Coder"),
+        participant_id = validate_storage_identifier(
+          participant_id,
+          "Participant ID"
+        )
+      ),
+      error = function(error) {
+        shiny::showNotification(conditionMessage(error), type = "warning")
+        NULL
+      }
+    )
+    if (is.null(identifiers)) {
+      return()
+    }
+
+    coder <- identifiers$coder
+    participant_id <- identifiers$participant_id
+
     project_directory <- tryCatch(
       choose_project_directory(),
       error = function(error) {
@@ -145,7 +185,8 @@ server <- function(input, output, session) {
       create_coding_mode(
         input$coding_mode,
         project_directory,
-        coding_settings[[input$coding_mode]]
+        coder,
+        participant_id
       ),
       error = function(error) {
         shiny::showModal(shiny::modalDialog(
