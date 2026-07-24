@@ -4,20 +4,12 @@
 ########## Phase 2: coding while building a codebook ##########
 #############################################################
 
-library(dplyr)
-library(readxl)
-library(tcltk)
-library(shiny)
-library(DT)
-library(stringr)
-library(bslib)
-library(shinycssloaders)
+source("R/coding_app.R")
 
 # This shiny app can be used for coding activities
 
 # 1. Select the folder in which the codebook is stored and the results will be saved
-Projectwd <- tk_choose.dir(default = "", caption = "Select directory")
-Projectwd <- paste0(Projectwd, "/")
+Projectwd <- choose_project_directory()
 
 # 2. Select the coding scheme
 Codebook <- "Inductive coding/Codebook_ShinyApp_02042026.xlsx" # DON'T CHANGE
@@ -25,22 +17,16 @@ Codebook_Act <- read_excel(file.path(Projectwd, Codebook)) # DON'T CHANGE
 
 # 3. Read in data
 data_path <- "20250819_Swinging_Moods_ESM_data_anonymized.xlsx"
-data <- read_excel(file.path(Projectwd, data_path)) # DON'T CHANGE
-
-# The dataframe should be sorted by Date, to allow for context coding
-# DON'T CHANGE
-Data <- data |>
-  dplyr::select(
-    Participant_ID,
-    # Beep_ID,
-    Day, Obs, Time1,
-    Thought,
-    Activity,
-    Location,
-    Company,
-    Event
-  ) |>
-  arrange(Participant_ID, Obs)
+Data <- load_coding_data(
+  Projectwd,
+  data_path,
+  c(
+    "Participant_ID",
+    # "Beep_ID",
+    "Day", "Obs", "Time1",
+    "Thought", "Activity", "Location", "Company", "Event"
+  )
+) # DON'T CHANGE
 
 # 4. Select who is coding (a folder will be created if this is a new person)
 User <- "JC" # ADD YOUR NAME HERE
@@ -49,7 +35,7 @@ User <- "JC" # ADD YOUR NAME HERE
 id_column <- "Participant_ID" # Change the name of the column here # DON'T CHANGE
 ppID <- 27311
 
-# 6. Indicate whether your codebook contains different levels?
+# 6. Indicate whether your codebook contains different levels
 Levels <- FALSE # DON'T CHANGE
 
 # 7. Click "Run App"
@@ -57,233 +43,37 @@ Levels <- FALSE # DON'T CHANGE
 
 ## THE REST OF THE CODE DOES NOT NEED TO BE CHANGED ##
 
-# A lot of the code that creates the table is copied from following github question
-## https://github.com/rstudio/shiny/issues/1246
+Codebook_Act <- prepare_codebook_choices(Codebook_Act, Levels)
 
-######### Create different colors for levels #########
-# Here we create a dataframe that colors the different levels in the dropdown menu (if levels are included)
-if (Levels == TRUE) {
-  Codebook_Act <- Codebook_Act[, colnames(Codebook_Act) %in% c("Level", "Code")]
-  t1 <- Codebook_Act |>
-    mutate(html = ifelse(Level == "1",
-      paste0("<span style='color:#9F73AB';>", Code, "</span>"),
-      ifelse(Level == "2",
-        paste0("<span style='color:#19376D';>", Code, "</span>"),
-        paste0("<span style='color:#0C7B93';>", Code, "</span>")
-      )
-    ))
-  Codebook_Act <- setNames(t1$Code, t1$html)
-} else {
-  Codebook_Act <- Codebook_Act$Code
-}
+Act_participant <- select_participant_data(Data, id_column, ppID)
+fields <- familiarization_fields(
+  proposed_event_id = "event_new",
+  existing_code_choices = Codebook_Act
+)
 
-######## Data Storage ##########
+coding_path <- initialize_coding_storage(
+  project_directory = Projectwd,
+  storage_directory = "Inductive coding",
+  user = User,
+  participant_id = ppID,
+  participant_data = Act_participant,
+  storage_columns = field_columns(fields)
+)
 
-# Here we check if the specified user already has a subfolder
-if (!file.exists(file.path(Projectwd, "Inductive coding/", User))) {
-  dir.create(file.path(Projectwd, "Inductive coding/", User))
-}
+column_order <- familiarization_column_order(fields)
 
-# Next we prepare the dataframe for the selected participant
-Act_participant <- Data |>
-  filter(.data[[id_column]] == ppID) # 326, 317, 318, 316, 309
+ui <- coding_ui(
+  tab_title = Codebook,
+  show_levels = Levels,
+  tab_intro = if (Levels) "Data familiarization: event"
+)
 
-# If the participant is selected for the first time we create an empty dataframe
-if (!file.exists(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))) {
-  Empty <- data.frame(
-    `Familiarization note: beep` = rep(NA, nrow(Act_participant)),
-    `Familiarization note: day` = rep(NA, nrow(Act_participant)),
-    `Proposed event code` = rep(NA, nrow(Act_participant)),
-    `Existing event code` = rep(NA, nrow(Act_participant))
-  )
-  write.csv(Empty, paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))
-}
-
-
-########## Shiny App ###########
-
-if (Levels == TRUE) {
-  ui <- navbarPage("Qualitative Coding",
-    theme = bs_theme(version = 5, bootswatch = "minty"),
-    tabPanel(Codebook, "Data familiarization: event",
-      id = "Week",
-      tags$div(
-        style = "border: 1px solid #0C7B93; padding: 5px; margin: 5px; display: inline-block;",
-        tags$span("Level 3", style = "color: #0C7B93;")
-      ),
-      tags$div(
-        style = "border: 1px solid #19376D; padding: 5px; margin: 5px; display: inline-block;",
-        tags$span("Level 2", style = "color: #19376D;")
-      ),
-      tags$div(
-        style = "border: 1px solid #9F73AB; padding: 5px; margin: 5px; display: inline-block;",
-        tags$span("Level 1", style = "color: #9F73AB;")
-      ),
-      withSpinner(DT::dataTableOutput("Act_participant"))
-    ),
-  )
-} else {
-  ui <- navbarPage("Qualitative Coding",
-    theme = bs_theme(version = 5, bootswatch = "minty"),
-    tabPanel(Codebook,
-      id = "Week",
-      withSpinner(DT::dataTableOutput("Act_participant"))
-    ),
-  )
-}
-
-server <- function(input, output, session) {
-  ###################### Create Datatable #####################
-  #############################################################
-  output$Act_participant <- DT::renderDataTable({
-    a <- Act_participant # the static dataframe
-    a$"Familiarization note: beep" <- sapply(paste0("selectize_wrap_general", 1:nrow(Act_participant)), function(x) as.character(htmltools::HTML(as.character(uiOutput(x)))))
-    a$"Familiarization note: day" <- sapply(paste0("selectize_wrap_depth", 1:nrow(Act_participant)), function(x) as.character(htmltools::HTML(as.character(uiOutput(x)))))
-    a$"Proposed event code" <- sapply(paste0("selectize_wrap_event_new", 1:nrow(Act_participant)), function(x) as.character(htmltools::HTML(as.character(uiOutput(x)))))
-    a$"Existing event code" <- sapply(paste0("selectize_wrap_event_existing", 1:nrow(Act_participant)), function(x) as.character(htmltools::HTML(as.character(uiOutput(x)))))
-
-    # Reorder the columns for easier coding
-    a <- a |>
-      dplyr::select(
-        Participant_ID, Day, Obs, Time1,
-        Thought,
-        Activity,
-        Location,
-        Company,
-        Event,
-        `Familiarization note: beep`, `Familiarization note: day`,
-        `Proposed event code`, `Existing event code`
-      )
-
-
-    a <- datatable(a,
-      escape = F, selection = "single",
-      options = list(
-        paging = TRUE, ordering = FALSE, searching = FALSE, pageLength = 20, dom = "tp",
-        preDrawCallback = JS("function() { Shiny.unbindAll(this.api().table().node());}"),
-        drawCallback = JS("function() { Shiny.bindAll(this.api().table().node()); } ")
-      )
-    )
-    return(a)
-  })
-
-  ################ rendering fancy selectize widgets ###############
-  ##################################################################
-
-  # proxy <- DT::dataTableProxy('Act_participant')
-
-  # Read existing Code/ Comments
-  Act <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[-1]
-
-  observeEvent(input$Act_participant_rows_current, {
-    Act <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[-1]
-    print("Act dataframe reloaded")
-    print(head(Act))
-
-    # This has to be in there otherwise its saved but not loaded
-    for (i in 1:nrow(Act_participant)) {
-      subs_widget_general <- substitute(
-        {
-          textInput(paste0("selectize_general", i), NULL,
-            placeholder = "Beep level",
-            value = c(unlist(str_split(Act[i, 1], " ; ")))
-          )
-        },
-        list(i = i)
-      )
-      output[[paste0("selectize_wrap_general", i)]] <- renderUI(subs_widget_general, quoted = T)
-    }
-
-
-    for (i in 1:nrow(Act_participant)) {
-      subs_widget_depth <- substitute(
-        {
-          textInput(paste0("selectize_depth", i), NULL, placeholder = "Day level", value = c(unlist(str_split(Act[i, 2], " ; "))))
-        },
-        list(i = i)
-      )
-      output[[paste0("selectize_wrap_depth", i)]] <- renderUI(subs_widget_depth, quoted = T)
-    }
-
-    for (i in 1:nrow(Act_participant)) {
-      subs_widget_new_event <- substitute(
-        {
-          textInput(paste0("selectize_event_new", i), NULL, placeholder = "Proposed event code", value = c(unlist(str_split(Act[i, 3], " ; "))))
-        },
-        list(i = i)
-      )
-      output[[paste0("selectize_wrap_event_new", i)]] <- renderUI(subs_widget_new_event, quoted = T)
-    }
-
-    for (i in 1:nrow(Act_participant)) {
-      subs_widget_ex_event <- substitute(
-        {
-          selectizeInput(paste0("selectize_event_existing", i), NULL,
-            choices = as.list(Codebook_Act), selected = c(unlist(str_split(Act[i, 4], " ; "))), multiple = T,
-            options = list(render = I("
-                                                      {
-                                                        item: function(item, escape) { return '<div>' + item.label + '</div>'; },
-                                                        option: function(item, escape) { return '<div>' + item.label + '</div>'; }
-                                                      }"))
-          )
-        },
-        list(i = i)
-      )
-      output[[paste0("selectize_wrap_event_existing", i)]] <- renderUI(subs_widget_ex_event, quoted = T)
-    }
-    # DT::reloadData(proxy, resetPaging = FALSE)
-  })
-
-
-  ########### Save Code and Comments if Input changes ###########
-  ###############################################################
-
-  lapply(
-    X = 1:nrow(Act_participant),
-    FUN = function(i) {
-      observeEvent(input[[paste0("selectize_general", i)]], {
-        Other_Comments <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[, -1]
-        Other_Comments[i, 1] <- paste(input[[paste0("selectize_general", i)]], collapse = " ; ")
-        write.csv(Other_Comments, file = paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""), row.names = TRUE)
-      })
-    }
-  )
-
-  lapply(
-    X = 1:nrow(Act_participant),
-    FUN = function(i) {
-      observeEvent(input[[paste0("selectize_depth", i)]], {
-        Depth_Comments <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[, -1]
-        Depth_Comments[i, 2] <- paste(input[[paste0("selectize_depth", i)]], collapse = " ; ")
-        write.csv(Depth_Comments, file = paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""), row.names = TRUE)
-      })
-    }
-  )
-
-  lapply(
-    X = 1:nrow(Act_participant),
-    FUN = function(i) {
-      observeEvent(input[[paste0("selectize_event_new", i)]], {
-        Event_code <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[, -1]
-        Event_code[i, 3] <- paste(input[[paste0("selectize_event_new", i)]], collapse = " ; ")
-        write.csv(Event_code, file = paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""), row.names = TRUE)
-      })
-    }
-  )
-
-  lapply(
-    X = 1:nrow(Act_participant),
-    FUN = function(i) {
-      observeEvent(input[[paste0("selectize_event_existing", i)]], {
-        Event_existing_code <- read.csv(paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""))[, -1]
-        Event_existing_code[i, 4] <- paste(input[[paste0("selectize_event_existing", i)]], collapse = " ; ")
-        write.csv(Event_existing_code, file = paste(Projectwd, "Inductive coding/", User, "/Act_", ppID, ".csv", sep = ""), row.names = TRUE)
-      })
-    }
-  )
-
-  ####### Reload data if page of the table changes #######
-  ########################################################
-}
+server <- coding_server(
+  participant_data = Act_participant,
+  coding_path = coding_path,
+  fields = fields,
+  column_order = column_order,
+  wrap_html = TRUE
+)
 
 shinyApp(ui, server)
