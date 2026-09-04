@@ -1,8 +1,10 @@
 # Mode-specific setup shared by the consolidated launcher.
 
-deductive_data_columns <- function() {
+deductive_data_columns <- function(
+  participant_id_column = "Participant_ID"
+) {
   c(
-    "Participant_ID",
+    participant_id_column,
     "Day", "Obs", "Time1",
     "Thought", "Thought_ENG",
     "Activity", "Activity_ENG",
@@ -12,21 +14,26 @@ deductive_data_columns <- function() {
 }
 
 
-inductive_data_columns <- function() {
+inductive_data_columns <- function(
+  participant_id_column = "Participant_ID"
+) {
   c(
-    "Participant_ID",
+    participant_id_column,
     "Day", "Obs", "Time1",
     "Thought", "Activity", "Location", "Company", "Event"
   )
 }
 
 
-default_display_columns <- function(mode) {
+default_display_columns <- function(
+  mode,
+  participant_id_column = "Participant_ID"
+) {
   switch(
     mode,
-    deductive = deductive_data_columns(),
-    inductive_phase1 = inductive_data_columns(),
-    inductive_phase2 = inductive_data_columns(),
+    deductive = deductive_data_columns(participant_id_column),
+    inductive_phase1 = inductive_data_columns(participant_id_column),
+    inductive_phase2 = inductive_data_columns(participant_id_column),
     character()
   )
 }
@@ -90,7 +97,8 @@ create_deductive_mode <- function(
   participant_id,
   data_file,
   codebook_files,
-  display_columns = deductive_data_columns()
+  display_columns = deductive_data_columns(participant_id_column),
+  participant_id_column = "Participant_ID"
 ) {
   thought_codebook <- load_codebook(
     codebook_files$thought,
@@ -113,7 +121,11 @@ create_deductive_mode <- function(
 
   data <- load_coding_data(
     data_file,
-    unique(c(deductive_data_columns(), display_columns))
+    unique(c(
+      deductive_data_columns(participant_id_column),
+      display_columns
+    )),
+    participant_id_column
   )
 
   fields <- list(
@@ -157,7 +169,7 @@ create_deductive_mode <- function(
 
   participant_data <- select_participant_data(
     data,
-    "Participant_ID",
+    participant_id_column,
     participant_id
   )
   coding_path <- initialize_coding_storage(
@@ -190,17 +202,22 @@ create_inductive_phase1_mode <- function(
   participant_id,
   data_file,
   codebook_files = NULL,
-  display_columns = inductive_data_columns()
+  display_columns = inductive_data_columns(participant_id_column),
+  participant_id_column = "Participant_ID"
 ) {
   data <- load_coding_data(
     data_file,
-    unique(c(inductive_data_columns(), display_columns))
+    unique(c(
+      inductive_data_columns(participant_id_column),
+      display_columns
+    )),
+    participant_id_column
   )
 
   fields <- familiarization_fields(proposed_event_id = "event")
   participant_data <- select_participant_data(
     data,
-    "Participant_ID",
+    participant_id_column,
     participant_id
   )
   coding_path <- initialize_coding_storage(
@@ -230,7 +247,8 @@ create_inductive_phase2_mode <- function(
   participant_id,
   data_file,
   codebook_files,
-  display_columns = inductive_data_columns()
+  display_columns = inductive_data_columns(participant_id_column),
+  participant_id_column = "Participant_ID"
 ) {
   codebook <- load_codebook(
     codebook_files$event,
@@ -240,7 +258,11 @@ create_inductive_phase2_mode <- function(
 
   data <- load_coding_data(
     data_file,
-    unique(c(inductive_data_columns(), display_columns))
+    unique(c(
+      inductive_data_columns(participant_id_column),
+      display_columns
+    )),
+    participant_id_column
   )
 
   fields <- familiarization_fields(
@@ -249,7 +271,7 @@ create_inductive_phase2_mode <- function(
   )
   participant_data <- select_participant_data(
     data,
-    "Participant_ID",
+    participant_id_column,
     participant_id
   )
   coding_path <- initialize_coding_storage(
@@ -281,7 +303,8 @@ create_coding_mode <- function(
   participant_id,
   data_file,
   codebook_files = NULL,
-  display_columns = default_display_columns(mode)
+  display_columns = default_display_columns(mode, participant_id_column),
+  participant_id_column = "Participant_ID"
 ) {
   mode_factory <- switch(
     mode,
@@ -296,6 +319,7 @@ create_coding_mode <- function(
     participant_id = participant_id,
     data_file = data_file,
     codebook_files = codebook_files,
-    display_columns = display_columns
+    display_columns = display_columns,
+    participant_id_column = participant_id_column
   )
 }

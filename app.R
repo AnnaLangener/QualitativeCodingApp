@@ -44,11 +44,6 @@ launcher_content <- function() {
         "coder",
         "Coder (user)",
         placeholder = "Enter your name or coder ID"
-      ),
-      shiny::textInput(
-        "participant_id",
-        "Participant ID",
-        placeholder = "Enter the participant to code"
       )
     ),
     shiny::tags$div(
@@ -58,6 +53,7 @@ launcher_content <- function() {
         "selected_data_file",
         "Data file"
       ),
+      shiny::uiOutput("participant_selection_ui"),
       shiny::uiOutput("display_columns_ui"),
       shiny::tags$div(
         class = "codebook-inputs",
@@ -164,10 +160,12 @@ ui <- shiny::fluidPage(
         cursor: pointer;
       }
       .launcher-fields {
+        margin-bottom: 1.5rem;
+      }
+      .participant-selection-row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
-        margin-bottom: 1.5rem;
       }
       .launcher-files {
         margin-bottom: 1.5rem;
@@ -203,7 +201,7 @@ ui <- shiny::fluidPage(
         min-width: 0;
       }
       @media (max-width: 576px) {
-        .launcher-fields,
+        .participant-selection-row,
         .codebook-grid {
           grid-template-columns: 1fr;
         }
@@ -231,7 +229,9 @@ ui <- shiny::fluidPage(
 server <- function(input, output, session) {
   active_mode <- shiny::reactiveVal(NULL)
   data_file <- shiny::reactiveVal(NULL)
+  data_file_contents <- shiny::reactiveVal(NULL)
   data_file_columns <- shiny::reactiveVal(NULL)
+  initial_participant_id_column <- shiny::reactiveVal(NULL)
   initial_display_columns <- shiny::reactiveVal(character())
 
   require_file <- function(file, label) {
@@ -248,6 +248,14 @@ server <- function(input, output, session) {
     )
     if (is.null(files$data)) {
       stop("Select a data file before starting.")
+    }
+    files$participant_id_column <- input$participant_id_column
+    if (
+      is.null(files$participant_id_column) ||
+        length(files$participant_id_column) != 1 ||
+        !files$participant_id_column %in% data_file_columns()
+    ) {
+      stop("Select a participant ID column before starting.")
     }
     files$display_columns <- input$display_columns
     if (length(files$display_columns) == 0) {
@@ -296,6 +304,60 @@ server <- function(input, output, session) {
     if (is.null(path)) "No file selected" else basename(path)
   })
 
+  output$participant_selection_ui <- shiny::renderUI({
+    columns <- data_file_columns()
+    data <- data_file_contents()
+    id_column <- initial_participant_id_column()
+    if (is.null(columns) || is.null(data) || is.null(id_column)) {
+      return(NULL)
+    }
+
+    shiny::tags$div(
+      class = "participant-selection-row",
+      shiny::selectizeInput(
+        "participant_id_column",
+        "Participant ID column",
+        choices = columns,
+        selected = id_column,
+        multiple = FALSE,
+        options = list(placeholder = "Choose the ID column"),
+        width = "100%"
+      ),
+      shiny::selectizeInput(
+        "participant_id",
+        "Participant ID to code",
+        choices = participant_id_choices(data, id_column),
+        multiple = FALSE,
+        options = list(placeholder = "Choose a participant"),
+        width = "100%"
+      )
+    )
+  })
+
+  shiny::observeEvent(input$participant_id_column, {
+    data <- data_file_contents()
+    id_column <- input$participant_id_column
+    if (
+      is.null(data) || is.null(id_column) ||
+        !id_column %in% colnames(data)
+    ) {
+      return()
+    }
+
+    choices <- participant_id_choices(data, id_column)
+    selected <- input$participant_id
+    if (is.null(selected) || !selected %in% choices) {
+      selected <- if (length(choices) > 0) choices[[1]] else character()
+    }
+    shiny::updateSelectizeInput(
+      session,
+      "participant_id",
+      choices = choices,
+      selected = selected,
+      server = TRUE
+    )
+  }, ignoreInit = TRUE)
+
   output$display_columns_ui <- shiny::renderUI({
     columns <- data_file_columns()
     if (is.null(columns)) {
@@ -339,22 +401,45 @@ server <- function(input, output, session) {
       return()
     }
 
-    columns <- tryCatch(
-      read_tabular_column_names(path, "The data file"),
+    data <- tryCatch(
+      read_tabular_file(path, "The data file"),
       error = function(error) {
         shiny::showNotification(conditionMessage(error), type = "warning")
         NULL
       }
     )
-    if (is.null(columns)) {
+    if (is.null(data)) {
+      return()
+    }
+    columns <- colnames(data)
+    if (length(columns) == 0) {
+      shiny::showNotification(
+        "The data file does not contain any columns.",
+        type = "warning"
+      )
+      return()
+    }
+    if (anyDuplicated(columns)) {
+      shiny::showNotification(
+        "The data file must have unique column names.",
+        type = "warning"
+      )
       return()
     }
 
+    id_column <- if ("Participant_ID" %in% columns) {
+      "Participant_ID"
+    } else {
+      columns[[1]]
+    }
+
     defaults <- intersect(
-      default_display_columns(input$coding_mode),
+      default_display_columns(input$coding_mode, id_column),
       columns
     )
     data_file(path)
+    data_file_contents(data)
+    initial_participant_id_column(id_column)
     initial_display_columns(defaults)
     data_file_columns(columns)
   }, ignoreNULL = FALSE)
@@ -380,11 +465,16 @@ server <- function(input, output, session) {
     shiny::req(input$coding_mode)
 
     coder <- trimws(input$coder)
-    participant_id <- trimws(input$participant_id)
+    participant_id <- input$participant_id
+    participant_id <- if (is.null(participant_id)) {
+      ""
+    } else {
+      trimws(as.character(participant_id))
+    }
 
     if (!nzchar(coder) || !nzchar(participant_id)) {
       shiny::showNotification(
-        "Enter both a coder and a participant ID before starting.",
+        "Enter a coder and select a participant ID before starting.",
         type = "warning"
       )
       return()
@@ -423,12 +513,13 @@ server <- function(input, output, session) {
 
     mode <- tryCatch(
       create_coding_mode(
-        input$coding_mode,
-        coder,
-        participant_id,
-        files$data,
-        files$codebooks,
-        files$display_columns
+        mode = input$coding_mode,
+        user = coder,
+        participant_id = participant_id,
+        data_file = files$data,
+        codebook_files = files$codebooks,
+        display_columns = files$display_columns,
+        participant_id_column = files$participant_id_column
       ),
       error = function(error) {
         shiny::showModal(shiny::modalDialog(

@@ -39,10 +39,11 @@ selections:
    which codebook and coding fields are shown.
 2. **Coder (user).** Enter a name or coder ID. This becomes part of the
    coded-data filename so different coders get separate files.
-3. **Participant ID.** Enter an ID exactly as it occurs in the
-   `Participant_ID` column of the data. Only that participant's
-   observations are loaded into the coding table.
-4. **Data file.** Select the CSV or Excel file containing the ESM data.
+3. **Data file.** Select the CSV or Excel file containing the ESM data.
+4. **Participant.** Choose the column containing participant IDs, then
+   choose the participant to code from the IDs found in that column.
+   Only that participant's observations are loaded into the coding
+   table.
 5. **Display columns.** After selecting the data file, choose which of
    its columns should appear in the coding table. The columns normally
    used by the selected coding activity are selected by default.
@@ -70,13 +71,14 @@ Input files may be stored in any folders and may have any names. CSV
 (`.csv`) and Excel (`.xls` or `.xlsx`) files are supported. The app
 reports missing required columns before starting the coding table.
 
-The selected data file must contain a `Participant_ID` column. The app
-orders the selected data by `Participant_ID` and `Obs` and reports an
-error if the entered participant ID is not present.
+The selected data file must contain a participant ID column. If it is
+named `Participant_ID`, the app selects it by default; otherwise, the
+first data column is selected initially and can be changed. The app
+orders the selected data by the chosen participant ID column and `Obs`.
 
-All activities require the columns `Participant_ID`, `Day`, `Obs`,
-`Time1`, `Thought`, `Activity`, `Location`, and `Company`. Deductive
-coding additionally requires `Thought_ENG`, `Activity_ENG`,
+All activities require a selected participant ID column plus `Day`,
+`Obs`, `Time1`, `Thought`, `Activity`, `Location`, and `Company`.
+Deductive coding additionally requires `Thought_ENG`, `Activity_ENG`,
 `Location_ENG`, and `Company_ENG`; both inductive phases require
 `Event`.
 

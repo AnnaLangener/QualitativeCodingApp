@@ -123,11 +123,18 @@ require_columns <- function(data, columns, label) {
 }
 
 
-load_coding_data <- function(data_file, columns) {
+load_coding_data <- function(
+  data_file,
+  columns,
+  participant_id_column = "Participant_ID"
+) {
   read_tabular_file(data_file, "The data file") |>
     require_columns(columns, "The data file") |>
     dplyr::select(dplyr::all_of(columns)) |>
-    dplyr::arrange(Participant_ID, Obs)
+    dplyr::arrange(
+      .data[[participant_id_column]],
+      .data[["Obs"]]
+    )
 }
 
 
@@ -156,6 +163,16 @@ select_participant_data <- function(data, id_column, participant_id) {
   }
 
   participant_data
+}
+
+
+participant_id_choices <- function(data, id_column) {
+  if (is.null(id_column) || !id_column %in% colnames(data)) {
+    return(character())
+  }
+
+  values <- trimws(as.character(data[[id_column]]))
+  unique(values[!is.na(values) & nzchar(values)])
 }
 
 
@@ -254,9 +271,12 @@ field_columns <- function(fields) {
 }
 
 
-familiarization_column_order <- function(fields) {
+familiarization_column_order <- function(
+  fields,
+  participant_id_column = "Participant_ID"
+) {
   c(
-    "Participant_ID", "Day", "Obs", "Time1",
+    participant_id_column, "Day", "Obs", "Time1",
     "Thought", "Activity", "Location", "Company", "Event",
     field_columns(fields)
   )
