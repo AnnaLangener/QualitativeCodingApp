@@ -72,6 +72,42 @@ read_tabular_file <- function(upload, label) {
 }
 
 
+read_tabular_column_names <- function(upload, label) {
+  if (is.character(upload)) {
+    name <- basename(upload)
+    path <- upload
+  } else {
+    name <- upload$name[[1]]
+    path <- upload$datapath[[1]]
+  }
+  extension <- tolower(tools::file_ext(name))
+
+  columns <- switch(
+    extension,
+    csv = colnames(utils::read.csv(
+      path,
+      nrows = 0,
+      check.names = FALSE
+    )),
+    xls = colnames(readxl::read_excel(path, n_max = 0)),
+    xlsx = colnames(readxl::read_excel(path, n_max = 0)),
+    stop(
+      label,
+      " must be a CSV or Excel file (.csv, .xls, or .xlsx)."
+    )
+  )
+
+  if (length(columns) == 0) {
+    stop(label, " does not contain any columns.")
+  }
+  if (anyDuplicated(columns)) {
+    stop(label, " must have unique column names.")
+  }
+
+  columns
+}
+
+
 require_columns <- function(data, columns, label) {
   missing_columns <- setdiff(columns, colnames(data))
   if (length(missing_columns) > 0) {

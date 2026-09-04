@@ -43,12 +43,18 @@ selections:
    `Participant_ID` column of the data. Only that participant's
    observations are loaded into the coding table.
 4. **Data file.** Select the CSV or Excel file containing the ESM data.
-5. **Codebook file(s).** For deductive coding, select the separate
+5. **Display columns.** After selecting the data file, choose which of
+   its columns should appear in the coding table. The columns normally
+   used by the selected coding activity are selected by default.
+6. **Codebook file(s).** For deductive coding, select the separate
    thought, activity, location, and company codebooks. For inductive
    Phase 2, select the event codebook. This field is not shown for
    inductive Phase 1 because that activity does not use a codebook.
-6. Click **Start Coding**. The coded CSV is saved automatically in the
+7. Click **Start Coding**. The coded CSV is saved automatically in the
    same folder as the selected data file.
+
+At least one display column must be selected. Coding-entry columns are
+always included in the table and are not affected by this selection.
 
 Both the coder and participant ID are required. Leading and trailing
 spaces are ignored. Because these values are used in file names, they

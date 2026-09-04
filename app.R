@@ -58,6 +58,7 @@ launcher_content <- function() {
         "selected_data_file",
         "Data file"
       ),
+      shiny::uiOutput("display_columns_ui"),
       shiny::tags$div(
         class = "codebook-inputs",
         shiny::conditionalPanel(
@@ -184,6 +185,11 @@ ui <- shiny::fluidPage(
         color: #5f6f69;
         overflow-wrap: anywhere;
       }
+      .display-columns-help {
+        margin-top: -0.5rem;
+        color: #5f6f69;
+        font-size: 0.9rem;
+      }
       .codebook-inputs h2 {
         margin: 1.25rem 0 0.75rem;
         font-size: 1.1rem;
@@ -225,6 +231,8 @@ ui <- shiny::fluidPage(
 server <- function(input, output, session) {
   active_mode <- shiny::reactiveVal(NULL)
   data_file <- shiny::reactiveVal(NULL)
+  data_file_columns <- shiny::reactiveVal(NULL)
+  initial_display_columns <- shiny::reactiveVal(character())
 
   require_file <- function(file, label) {
     if (is.null(file) || nrow(file) != 1 || !nzchar(file$datapath[[1]])) {
@@ -240,6 +248,18 @@ server <- function(input, output, session) {
     )
     if (is.null(files$data)) {
       stop("Select a data file before starting.")
+    }
+    files$display_columns <- input$display_columns
+    if (length(files$display_columns) == 0) {
+      stop("Select at least one display column before starting.")
+    }
+    unknown_columns <- setdiff(files$display_columns, data_file_columns())
+    if (length(unknown_columns) > 0) {
+      stop(
+        "The selected display columns are not in the data file: ",
+        paste(unknown_columns, collapse = ", "),
+        "."
+      )
     }
 
     files$codebooks <- switch(
@@ -276,6 +296,32 @@ server <- function(input, output, session) {
     if (is.null(path)) "No file selected" else basename(path)
   })
 
+  output$display_columns_ui <- shiny::renderUI({
+    columns <- data_file_columns()
+    if (is.null(columns)) {
+      return(NULL)
+    }
+
+    shiny::tagList(
+      shiny::selectizeInput(
+        "display_columns",
+        "Display columns",
+        choices = columns,
+        selected = initial_display_columns(),
+        multiple = TRUE,
+        options = list(
+          plugins = list("remove_button"),
+          placeholder = "Choose columns to display"
+        ),
+        width = "100%"
+      ),
+      shiny::tags$p(
+        class = "display-columns-help",
+        "These data columns will appear in the coding table."
+      )
+    )
+  })
+
   shiny::observeEvent(input$choose_data_file, {
     clicks <- input$choose_data_file
     if (is.null(clicks) || clicks < 1) {
@@ -289,9 +335,28 @@ server <- function(input, output, session) {
         NULL
       }
     )
-    if (!is.null(path)) {
-      data_file(path)
+    if (is.null(path)) {
+      return()
     }
+
+    columns <- tryCatch(
+      read_tabular_column_names(path, "The data file"),
+      error = function(error) {
+        shiny::showNotification(conditionMessage(error), type = "warning")
+        NULL
+      }
+    )
+    if (is.null(columns)) {
+      return()
+    }
+
+    defaults <- intersect(
+      default_display_columns(input$coding_mode),
+      columns
+    )
+    data_file(path)
+    initial_display_columns(defaults)
+    data_file_columns(columns)
   }, ignoreNULL = FALSE)
 
   output$root_ui <- shiny::renderUI({
@@ -362,7 +427,8 @@ server <- function(input, output, session) {
         coder,
         participant_id,
         files$data,
-        files$codebooks
+        files$codebooks,
+        files$display_columns
       ),
       error = function(error) {
         shiny::showModal(shiny::modalDialog(

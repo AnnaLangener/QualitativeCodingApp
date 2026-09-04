@@ -1,5 +1,62 @@
 # Mode-specific setup shared by the consolidated launcher.
 
+deductive_data_columns <- function() {
+  c(
+    "Participant_ID",
+    "Day", "Obs", "Time1",
+    "Thought", "Thought_ENG",
+    "Activity", "Activity_ENG",
+    "Location", "Location_ENG",
+    "Company", "Company_ENG"
+  )
+}
+
+
+inductive_data_columns <- function() {
+  c(
+    "Participant_ID",
+    "Day", "Obs", "Time1",
+    "Thought", "Activity", "Location", "Company", "Event"
+  )
+}
+
+
+default_display_columns <- function(mode) {
+  switch(
+    mode,
+    deductive = deductive_data_columns(),
+    inductive_phase1 = inductive_data_columns(),
+    inductive_phase2 = inductive_data_columns(),
+    character()
+  )
+}
+
+
+deductive_column_order <- function(display_columns, fields) {
+  coding_groups <- list(
+    Code_Thought = c("Thought", "Thought_ENG"),
+    Code_Activity = c("Activity", "Activity_ENG"),
+    Code_Location = c("Location", "Location_ENG"),
+    Code_Company = c("Company", "Company_ENG")
+  )
+  order <- character()
+  placed_fields <- character()
+
+  for (column in display_columns) {
+    order <- c(order, column)
+    for (field in names(coding_groups)) {
+      selected_group <- intersect(display_columns, coding_groups[[field]])
+      if (length(selected_group) > 0 && column == tail(selected_group, 1)) {
+        order <- c(order, field)
+        placed_fields <- c(placed_fields, field)
+      }
+    }
+  }
+
+  c(order, setdiff(field_columns(fields), placed_fields))
+}
+
+
 new_coding_mode <- function(
   title,
   participant_data,
@@ -32,7 +89,8 @@ create_deductive_mode <- function(
   user,
   participant_id,
   data_file,
-  codebook_files
+  codebook_files,
+  display_columns = deductive_data_columns()
 ) {
   thought_codebook <- load_codebook(
     codebook_files$thought,
@@ -55,14 +113,7 @@ create_deductive_mode <- function(
 
   data <- load_coding_data(
     data_file,
-    c(
-      "Participant_ID",
-      "Day", "Obs", "Time1",
-      "Thought", "Thought_ENG",
-      "Activity", "Activity_ENG",
-      "Location", "Location_ENG",
-      "Company", "Company_ENG"
-    )
+    unique(c(deductive_data_columns(), display_columns))
   )
 
   fields <- list(
@@ -117,14 +168,7 @@ create_deductive_mode <- function(
     storage_columns = field_columns(fields)
   )
 
-  column_order <- c(
-    "Participant_ID", "Day", "Obs", "Time1",
-    "Thought", "Thought_ENG", "Code_Thought",
-    "Activity", "Activity_ENG", "Code_Activity",
-    "Location", "Location_ENG", "Code_Location",
-    "Company", "Company_ENG", "Code_Company",
-    "Comments: general", "Comments: depth"
-  )
+  column_order <- deductive_column_order(display_columns, fields)
 
   new_coding_mode(
     title = "Deductive coding",
@@ -145,15 +189,12 @@ create_inductive_phase1_mode <- function(
   user,
   participant_id,
   data_file,
-  codebook_files = NULL
+  codebook_files = NULL,
+  display_columns = inductive_data_columns()
 ) {
   data <- load_coding_data(
     data_file,
-    c(
-      "Participant_ID",
-      "Day", "Obs", "Time1",
-      "Thought", "Activity", "Location", "Company", "Event"
-    )
+    unique(c(inductive_data_columns(), display_columns))
   )
 
   fields <- familiarization_fields(proposed_event_id = "event")
@@ -175,7 +216,7 @@ create_inductive_phase1_mode <- function(
     participant_data = participant_data,
     coding_path = coding_path,
     fields = fields,
-    column_order = familiarization_column_order(fields),
+    column_order = c(display_columns, field_columns(fields)),
     intro = paste(
       "Familiarize yourself with the data and record notes or",
       "proposed event codes."
@@ -188,7 +229,8 @@ create_inductive_phase2_mode <- function(
   user,
   participant_id,
   data_file,
-  codebook_files
+  codebook_files,
+  display_columns = inductive_data_columns()
 ) {
   codebook <- load_codebook(
     codebook_files$event,
@@ -198,11 +240,7 @@ create_inductive_phase2_mode <- function(
 
   data <- load_coding_data(
     data_file,
-    c(
-      "Participant_ID",
-      "Day", "Obs", "Time1",
-      "Thought", "Activity", "Location", "Company", "Event"
-    )
+    unique(c(inductive_data_columns(), display_columns))
   )
 
   fields <- familiarization_fields(
@@ -227,7 +265,7 @@ create_inductive_phase2_mode <- function(
     participant_data = participant_data,
     coding_path = coding_path,
     fields = fields,
-    column_order = familiarization_column_order(fields),
+    column_order = c(display_columns, field_columns(fields)),
     intro = paste(
       "Code the data while refining and applying the developing",
       "event codebook."
@@ -242,7 +280,8 @@ create_coding_mode <- function(
   user,
   participant_id,
   data_file,
-  codebook_files = NULL
+  codebook_files = NULL,
+  display_columns = default_display_columns(mode)
 ) {
   mode_factory <- switch(
     mode,
@@ -256,6 +295,7 @@ create_coding_mode <- function(
     user = user,
     participant_id = participant_id,
     data_file = data_file,
-    codebook_files = codebook_files
+    codebook_files = codebook_files,
+    display_columns = display_columns
   )
 }
