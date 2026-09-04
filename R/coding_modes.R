@@ -29,30 +29,32 @@ new_coding_mode <- function(
 
 
 create_deductive_mode <- function(
-  project_directory,
   user,
-  participant_id
+  participant_id,
+  data_file,
+  codebook_files
 ) {
-  thought_codebook <- utils::read.csv(file.path(
-    project_directory,
-    "Codebooks/Thoughts_Delespaul1995.csv"
-  ))
-  activity_codebook <- utils::read.csv(file.path(
-    project_directory,
-    "Codebooks/Activities_ATUS2024.csv"
-  ))
-  location_codebook <- utils::read.csv(file.path(
-    project_directory,
-    "Codebooks/Locations_Stadel2024.csv"
-  ))
-  company_codebook <- utils::read.csv(file.path(
-    project_directory,
-    "Codebooks/SocialContext_Delespaul1995.csv"
-  ))
+  thought_codebook <- load_codebook(
+    codebook_files$thought,
+    "The thought codebook",
+    has_levels = TRUE
+  )
+  activity_codebook <- load_codebook(
+    codebook_files$activity,
+    "The activity codebook",
+    has_levels = TRUE
+  )
+  location_codebook <- load_codebook(
+    codebook_files$location,
+    "The location codebook"
+  )
+  company_codebook <- load_codebook(
+    codebook_files$company,
+    "The company codebook"
+  )
 
   data <- load_coding_data(
-    project_directory,
-    "20250819_Swinging_Moods_ESM_data_anonymized.xlsx",
+    data_file,
     c(
       "Participant_ID",
       "Day", "Obs", "Time1",
@@ -108,8 +110,7 @@ create_deductive_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    project_directory = project_directory,
-    storage_directory = NULL,
+    data_file = data_file,
     user = user,
     participant_id = participant_id,
     participant_data = participant_data,
@@ -141,13 +142,13 @@ create_deductive_mode <- function(
 
 
 create_inductive_phase1_mode <- function(
-  project_directory,
   user,
-  participant_id
+  participant_id,
+  data_file,
+  codebook_files = NULL
 ) {
   data <- load_coding_data(
-    project_directory,
-    "20250819_Swinging_Moods_ESM_data_anonymized.xlsx",
+    data_file,
     c(
       "Participant_ID",
       "Day", "Obs", "Time1",
@@ -162,8 +163,7 @@ create_inductive_phase1_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    project_directory = project_directory,
-    storage_directory = file.path("Inductive coding", "Phase 1"),
+    data_file = data_file,
     user = user,
     participant_id = participant_id,
     participant_data = participant_data,
@@ -185,19 +185,19 @@ create_inductive_phase1_mode <- function(
 
 
 create_inductive_phase2_mode <- function(
-  project_directory,
   user,
-  participant_id
+  participant_id,
+  data_file,
+  codebook_files
 ) {
-  codebook <- readxl::read_excel(file.path(
-    project_directory,
-    "Inductive coding/Codebook_ShinyApp_02042026.xlsx"
-  ))
+  codebook <- load_codebook(
+    codebook_files$event,
+    "The event codebook"
+  )
   choices <- prepare_codebook_choices(codebook, FALSE)
 
   data <- load_coding_data(
-    project_directory,
-    "20250819_Swinging_Moods_ESM_data_anonymized.xlsx",
+    data_file,
     c(
       "Participant_ID",
       "Day", "Obs", "Time1",
@@ -215,8 +215,7 @@ create_inductive_phase2_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    project_directory = project_directory,
-    storage_directory = file.path("Inductive coding", "Phase 2"),
+    data_file = data_file,
     user = user,
     participant_id = participant_id,
     participant_data = participant_data,
@@ -240,9 +239,10 @@ create_inductive_phase2_mode <- function(
 
 create_coding_mode <- function(
   mode,
-  project_directory,
   user,
-  participant_id
+  participant_id,
+  data_file,
+  codebook_files = NULL
 ) {
   mode_factory <- switch(
     mode,
@@ -253,8 +253,9 @@ create_coding_mode <- function(
   )
 
   mode_factory(
-    project_directory = project_directory,
     user = user,
-    participant_id = participant_id
+    participant_id = participant_id,
+    data_file = data_file,
+    codebook_files = codebook_files
   )
 }

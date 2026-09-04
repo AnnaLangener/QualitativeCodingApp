@@ -12,23 +12,94 @@ required_packages <- c(
 invisible(lapply(required_packages, library, character.only = TRUE))
 
 
-choose_project_directory <- function() {
-  project_directory <- tcltk::tk_choose.dir(
-    default = "",
-    caption = "Select directory"
+choose_tabular_file <- function(caption) {
+  filters <- matrix(
+    c(
+      "CSV and Excel files", "*.csv;*.xls;*.xlsx",
+      "All files", "*.*"
+    ),
+    ncol = 2,
+    byrow = TRUE
   )
-  if (is.na(project_directory) || !nzchar(project_directory)) {
-    stop("No project directory was selected.")
+
+  data_path <- if (.Platform$OS.type == "windows") {
+    utils::choose.files(
+      caption = caption,
+      multi = FALSE,
+      filters = filters,
+      index = 1
+    )
+  } else {
+    tcltk::tk_choose.files(
+      caption = caption,
+      multi = FALSE,
+      filters = filters,
+      index = 1
+    )
+  }
+  if (
+    length(data_path) != 1 ||
+      is.na(data_path) ||
+      !nzchar(data_path)
+  ) {
+    return(NULL)
   }
 
-  normalizePath(project_directory, winslash = "/", mustWork = TRUE)
+  normalizePath(data_path, winslash = "/", mustWork = TRUE)
 }
 
 
-load_coding_data <- function(project_directory, data_path, columns) {
-  readxl::read_excel(file.path(project_directory, data_path)) |>
+read_tabular_file <- function(upload, label) {
+  if (is.character(upload)) {
+    name <- basename(upload)
+    path <- upload
+  } else {
+    name <- upload$name[[1]]
+    path <- upload$datapath[[1]]
+  }
+  extension <- tolower(tools::file_ext(name))
+
+  switch(
+    extension,
+    csv = utils::read.csv(path, check.names = FALSE),
+    xls = readxl::read_excel(path),
+    xlsx = readxl::read_excel(path),
+    stop(
+      label,
+      " must be a CSV or Excel file (.csv, .xls, or .xlsx)."
+    )
+  )
+}
+
+
+require_columns <- function(data, columns, label) {
+  missing_columns <- setdiff(columns, colnames(data))
+  if (length(missing_columns) > 0) {
+    stop(
+      label,
+      " is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      "."
+    )
+  }
+
+  data
+}
+
+
+load_coding_data <- function(data_file, columns) {
+  read_tabular_file(data_file, "The data file") |>
+    require_columns(columns, "The data file") |>
     dplyr::select(dplyr::all_of(columns)) |>
     dplyr::arrange(Participant_ID, Obs)
+}
+
+
+load_codebook <- function(codebook_file, label, has_levels = FALSE) {
+  required_columns <- if (has_levels) c("Code", "Level") else "Code"
+
+  read_tabular_file(codebook_file, label) |>
+    require_columns(required_columns, label)
 }
 
 
@@ -44,7 +115,7 @@ select_participant_data <- function(data, id_column, participant_id) {
     stop(
       "Participant ID '",
       participant_id,
-      "' was not found in the selected project's data."
+      "' was not found in the selected data file."
     )
   }
 
@@ -157,8 +228,7 @@ familiarization_column_order <- function(fields) {
 
 
 initialize_coding_storage <- function(
-  project_directory,
-  storage_directory,
+  data_file,
   user,
   participant_id,
   participant_data,
@@ -170,19 +240,17 @@ initialize_coding_storage <- function(
     "Participant ID"
   )
 
-  user_directory <- if (is.null(storage_directory)) {
-    file.path(project_directory, user)
-  } else {
-    file.path(project_directory, storage_directory, user)
-  }
-
-  if (!file.exists(user_directory)) {
-    dir.create(user_directory, recursive = TRUE)
-  }
-
+  data_path <- normalizePath(data_file, winslash = "/", mustWork = TRUE)
+  original_name <- tools::file_path_sans_ext(basename(data_path))
+  coding_filename <- paste(
+    original_name,
+    participant_id,
+    user,
+    sep = "_"
+  )
   coding_path <- file.path(
-    user_directory,
-    paste0("Act_", participant_id, ".csv")
+    dirname(data_path),
+    paste0(coding_filename, ".csv")
   )
 
   if (!file.exists(coding_path)) {

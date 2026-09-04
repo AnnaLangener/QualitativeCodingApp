@@ -22,9 +22,9 @@ To facilitate the coding process, a list of codes appears when clicking on the �
 <img src="Images/Example_app2.png" width="326" />
 
 To use this app, download the repository and open `app.R` in RStudio
-(<https://posit.co/download/rstudio-desktop/>). The consolidated app
-loads the data and mode-specific codebooks from a project folder that
-you select when starting a coding session.
+(<https://posit.co/download/rstudio-desktop/>). On its start screen, the
+consolidated app lets you select the data and mode-specific codebook
+files for each coding session.
 
 The app runs locally, so there are no privacy concerns when using it.
 
@@ -36,34 +36,37 @@ selections:
 
 1. **Coding activity.** Choose **Deductive coding**, **Inductive
    coding: Phase 1**, or **Inductive coding: Phase 2**. This determines
-   which codebook and coding fields are shown and where the results are
-   saved.
-2. **Coder (user).** Enter a name or coder ID. A new coder name creates
-   a new results folder. Reusing the same name opens that coder's
-   existing results, if present.
+   which codebook and coding fields are shown.
+2. **Coder (user).** Enter a name or coder ID. This becomes part of the
+   coded-data filename so different coders get separate files.
 3. **Participant ID.** Enter an ID exactly as it occurs in the
    `Participant_ID` column of the data. Only that participant's
    observations are loaded into the coding table.
-4. Click **Choose project folder and start**, then select the project
-   folder that contains the data and codebooks described below. The app
-   reads the required files from this folder; the data file itself is
-   not selected separately.
+4. **Data file.** Select the CSV or Excel file containing the ESM data.
+5. **Codebook file(s).** For deductive coding, select the separate
+   thought, activity, location, and company codebooks. For inductive
+   Phase 2, select the event codebook. This field is not shown for
+   inductive Phase 1 because that activity does not use a codebook.
+6. Click **Start Coding**. The coded CSV is saved automatically in the
+   same folder as the selected data file.
 
 Both the coder and participant ID are required. Leading and trailing
-spaces are ignored. Because these values are used in folder and file
-names, they cannot contain `< > : " / \ | ? *`.
+spaces are ignored. Because these values are used in file names, they
+cannot contain `< > : " / \ | ? *`.
 
 Use **Change coding activity** above the coding table to return to the
 start screen. This reloads the app, so the activity, coder, participant,
-and project folder can be selected again.
+and input files can be selected again.
 
-## Prepare the project folder
+## Prepare the input files
 
-Every activity reads
-`20250819_Swinging_Moods_ESM_data_anonymized.xlsx` from the root of the
-selected project folder. The data must contain a `Participant_ID`
-column. The app orders the selected data by `Participant_ID` and `Obs`
-and reports an error if the entered participant ID is not present.
+Input files may be stored in any folders and may have any names. CSV
+(`.csv`) and Excel (`.xls` or `.xlsx`) files are supported. The app
+reports missing required columns before starting the coding table.
+
+The selected data file must contain a `Participant_ID` column. The app
+orders the selected data by `Participant_ID` and `Obs` and reports an
+error if the entered participant ID is not present.
 
 All activities require the columns `Participant_ID`, `Day`, `Obs`,
 `Time1`, `Thought`, `Activity`, `Location`, and `Company`. Deductive
@@ -71,50 +74,30 @@ coding additionally requires `Thought_ENG`, `Activity_ENG`,
 `Location_ENG`, and `Company_ENG`; both inductive phases require
 `Event`.
 
-The selected activity determines which additional files are required:
+The selected activity determines which codebooks are required:
 
-- **Deductive coding** reads these files from `Codebooks/`:
-  `Thoughts_Delespaul1995.csv`, `Activities_ATUS2024.csv`,
-  `Locations_Stadel2024.csv`, and
-  `SocialContext_Delespaul1995.csv`.
+- **Deductive coding** requires separate thought, activity, location,
+  and company codebook files.
 - **Inductive coding: Phase 1** does not load a codebook.
-- **Inductive coding: Phase 2** reads
-  `Inductive coding/Codebook_ShinyApp_02042026.xlsx`.
+- **Inductive coding: Phase 2** requires one event codebook file.
 
 Codebooks must contain a column named `Code`. The deductive thought and
 activity codebooks must also contain a `Level` column; those levels are
 displayed in different colors.
 
-For example, the selected project folder should have this structure:
-
-``` text
-project folder/
-├── 20250819_Swinging_Moods_ESM_data_anonymized.xlsx
-├── Codebooks/
-│   ├── Thoughts_Delespaul1995.csv
-│   ├── Activities_ATUS2024.csv
-│   ├── Locations_Stadel2024.csv
-│   └── SocialContext_Delespaul1995.csv
-└── Inductive coding/
-    └── Codebook_ShinyApp_02042026.xlsx
-```
-
-Only the files needed for the selected coding activity have to be
-present.
-
 ## Coder and participant result files
 
-The app creates one CSV result file per coder and participant. If that
-file already exists, it is loaded so coding can continue where it
-stopped. Otherwise, the app creates it with empty (`NA`) coding values.
-
-The result path depends on the selected activity:
+The app creates one CSV result file per coder and participant in the
+same folder as the selected data file. Its name combines the input
+file's name (without its extension), the participant ID, and the coder:
 
 ``` text
-Deductive coding:          <project>/<coder>/Act_<participant>.csv
-Inductive coding: Phase 1: <project>/Inductive coding/Phase 1/<coder>/Act_<participant>.csv
-Inductive coding: Phase 2: <project>/Inductive coding/Phase 2/<coder>/Act_<participant>.csv
+<original_name>_<participant_id>_<coder>.csv
 ```
+
+If that file already exists, it is loaded so coding can continue where
+it stopped. Otherwise, the app creates it with empty (`NA`) coding
+values.
 
 ## Analyze the data
 
