@@ -103,9 +103,10 @@ file's name (without its extension), the participant ID, and the coder:
 <original_name>_<participant_id>_<coder>.csv
 ```
 
-If that file already exists, it is loaded so coding can continue where
-it stopped. Otherwise, the app creates it with empty (`NA`) coding
-values.
+Each result file contains the selected participant's complete input
+data followed by the coding columns. If a merged result file already
+exists, it is loaded so coding can continue where it stopped. Otherwise,
+the app creates it with empty (`NA`) coding values.
 
 ## Analyze the data
 

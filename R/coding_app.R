@@ -130,7 +130,6 @@ load_coding_data <- function(
 ) {
   read_tabular_file(data_file, "The data file") |>
     require_columns(columns, "The data file") |>
-    dplyr::select(dplyr::all_of(columns)) |>
     dplyr::arrange(
       .data[[participant_id_column]],
       .data[["Obs"]]
@@ -308,17 +307,18 @@ initialize_coding_storage <- function(
     dirname(data_path),
     paste0(coding_filename, ".csv")
   )
-
   if (!file.exists(coding_path)) {
-    empty_data <- as.data.frame(
+    coding_data <- as.data.frame(
       matrix(
         NA,
         nrow = nrow(participant_data),
         ncol = length(storage_columns)
       )
     )
-    names(empty_data) <- make.names(storage_columns, unique = TRUE)
-    utils::write.csv(empty_data, coding_path)
+    names(coding_data) <- make.names(storage_columns, unique = TRUE)
+
+    merged_data <- cbind(participant_data, coding_data)
+    utils::write.csv(merged_data, coding_path, row.names = FALSE)
   }
 
   coding_path
@@ -530,17 +530,35 @@ render_coding_widgets <- function(output, participant_data, saved_data, fields) 
 }
 
 
-register_save_observer <- function(input, row, coding_path, field) {
+read_saved_coding_data <- function(
+  coding_path,
+  data_column_count,
+  storage_column_count
+) {
+  saved_data <- utils::read.csv(coding_path, check.names = FALSE)
+  coding_indices <- data_column_count + seq_len(storage_column_count)
+  saved_data[, coding_indices, drop = FALSE]
+}
+
+
+register_save_observer <- function(
+  input,
+  row,
+  coding_path,
+  field,
+  data_column_count
+) {
   input_id <- paste0(field$input_prefix, row)
   storage_column <- field$storage_column
 
   shiny::observeEvent(input[[input_id]], {
-    saved_data <- utils::read.csv(coding_path)[, -1, drop = FALSE]
-    saved_data[row, storage_column] <- paste(
+    saved_data <- utils::read.csv(coding_path, check.names = FALSE)
+    coding_column <- data_column_count + storage_column
+    saved_data[row, coding_column] <- paste(
       input[[input_id]],
       collapse = " ; "
     )
-    utils::write.csv(saved_data, coding_path, row.names = TRUE)
+    utils::write.csv(saved_data, coding_path, row.names = FALSE)
   })
 }
 
@@ -551,9 +569,16 @@ register_save_observers <- function(
   coding_path,
   fields
 ) {
+  data_column_count <- ncol(participant_data)
   for (field in fields) {
     for (row in seq_len(nrow(participant_data))) {
-      register_save_observer(input, row, coding_path, field)
+      register_save_observer(
+        input,
+        row,
+        coding_path,
+        field,
+        data_column_count
+      )
     }
   }
 }
@@ -577,7 +602,11 @@ coding_server <- function(
     })
 
     shiny::observeEvent(input$Act_participant_rows_current, {
-      saved_data <- utils::read.csv(coding_path)[-1]
+      saved_data <- read_saved_coding_data(
+        coding_path,
+        ncol(participant_data),
+        length(fields)
+      )
       print("Act dataframe reloaded")
       print(utils::head(saved_data))
 
