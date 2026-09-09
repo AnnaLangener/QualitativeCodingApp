@@ -1,15 +1,9 @@
 # Mode-specific setup shared by the consolidated launcher.
 
-standard_deductive_variables <- function() {
-  c(thought = "Thought", activity = "Activity", location = "Location",
-    company = "Company")
-}
-
-
-validate_deductive_variables <- function(variables) {
+validate_coding_variables <- function(variables) {
   variables <- trimws(variables)
   if (length(variables) == 0 || anyNA(variables) || any(!nzchar(variables))) {
-    stop("Select at least one coding variable and give each variable a name.")
+    stop("Add at least one coding variable and give each variable a name.")
   }
   if (is.null(names(variables)) || anyDuplicated(names(variables)) ||
       any(!nzchar(names(variables)))) {
@@ -24,17 +18,11 @@ validate_deductive_variables <- function(variables) {
 
 
 deductive_data_columns <- function(
-  participant_id_column = "Participant_ID",
-  coding_variables = standard_deductive_variables()
+  participant_id_column = "Participant_ID"
 ) {
-  standard <- intersect(unname(coding_variables), standard_deductive_variables())
-  source_columns <- unlist(lapply(standard, function(variable) {
-    c(variable, paste0(variable, "_ENG"))
-  }), use.names = FALSE)
   c(
     participant_id_column,
-    "Day", "Obs", "Time1",
-    source_columns
+    "Day", "Obs", "Time1"
   )
 }
 
@@ -61,31 +49,6 @@ default_display_columns <- function(
     inductive_phase2 = inductive_data_columns(participant_id_column),
     character()
   )
-}
-
-
-deductive_column_order <- function(display_columns, fields) {
-  coding_groups <- list(
-    Code_Thought = c("Thought", "Thought_ENG"),
-    Code_Activity = c("Activity", "Activity_ENG"),
-    Code_Location = c("Location", "Location_ENG"),
-    Code_Company = c("Company", "Company_ENG")
-  )
-  order <- character()
-  placed_fields <- character()
-
-  for (column in display_columns) {
-    order <- c(order, column)
-    for (field in intersect(names(coding_groups), field_columns(fields))) {
-      selected_group <- intersect(display_columns, coding_groups[[field]])
-      if (length(selected_group) > 0 && column == tail(selected_group, 1)) {
-        order <- c(order, field)
-        placed_fields <- c(placed_fields, field)
-      }
-    }
-  }
-
-  c(order, setdiff(field_columns(fields), placed_fields))
 }
 
 
@@ -117,16 +80,12 @@ new_coding_mode <- function(
 }
 
 
-create_deductive_mode <- function(
-  user,
-  participant_id,
-  data_file,
+coding_variable_fields <- function(
+  coding_variables,
   codebook_files,
-  display_columns = deductive_data_columns(participant_id_column, coding_variables),
-  participant_id_column = "Participant_ID",
-  coding_variables = standard_deductive_variables()
+  storage_offset = 0L
 ) {
-  coding_variables <- validate_deductive_variables(coding_variables)
+  coding_variables <- validate_coding_variables(coding_variables)
   codebooks <- lapply(names(coding_variables), function(id) {
     label <- coding_variables[[id]]
     if (is.null(codebook_files[[id]])) {
@@ -134,29 +93,42 @@ create_deductive_mode <- function(
     }
     load_codebook(
       codebook_files[[id]],
-      paste("The", label, "codebook"),
-      has_levels = id %in% c("thought", "activity")
+      paste("The", label, "codebook")
     )
   })
   has_levels <- vapply(codebooks, function(book) "Level" %in% names(book), logical(1))
-
-  data <- load_coding_data(
-    data_file,
-    unique(c(
-      deductive_data_columns(participant_id_column, coding_variables),
-      display_columns
-    )),
-    participant_id_column
-  )
 
   fields <- lapply(seq_along(coding_variables), function(index) {
     coding_selectize_field(
       paste0("Code_", coding_variables[[index]]),
       paste0("code_variable_", index, "_"),
-      index,
+      storage_offset + index,
       prepare_codebook_choices(codebooks[[index]], has_levels[[index]])
     )
   })
+
+  list(fields = fields, show_levels = any(has_levels))
+}
+
+
+create_deductive_mode <- function(
+  user,
+  participant_id,
+  data_file,
+  codebook_files,
+  display_columns = deductive_data_columns(participant_id_column),
+  participant_id_column = "Participant_ID",
+  coding_variables = character()
+) {
+  coding_variables <- validate_coding_variables(coding_variables)
+  variable_fields <- coding_variable_fields(coding_variables, codebook_files)
+  data <- load_coding_data(
+    data_file,
+    unique(c(deductive_data_columns(participant_id_column), display_columns)),
+    participant_id_column
+  )
+
+  fields <- variable_fields$fields
   fields <- c(fields, list(
     coding_text_field(
       "Comments: general",
@@ -185,7 +157,7 @@ create_deductive_mode <- function(
     storage_columns = field_columns(fields)
   )
 
-  column_order <- deductive_column_order(display_columns, fields)
+  column_order <- c(display_columns, field_columns(fields))
 
   new_coding_mode(
     title = "Deductive coding",
@@ -193,7 +165,7 @@ create_deductive_mode <- function(
     coding_path = coding_path,
     fields = fields,
     column_order = column_order,
-    show_levels = any(has_levels),
+    show_levels = variable_fields$show_levels,
     intro = paste("Apply the selected codebooks to:",
                   paste(coding_variables, collapse = ", "))
   )
@@ -251,27 +223,34 @@ create_inductive_phase2_mode <- function(
   data_file,
   codebook_files,
   display_columns = inductive_data_columns(participant_id_column),
-  participant_id_column = "Participant_ID"
+  participant_id_column = "Participant_ID",
+  coding_variables = character()
 ) {
-  codebook <- load_codebook(
-    codebook_files$event,
-    "The event codebook"
+  coding_variables <- validate_coding_variables(coding_variables)
+  fields <- familiarization_note_fields()
+  proposed_fields <- lapply(seq_along(coding_variables), function(index) {
+    coding_text_field(
+      paste0("Proposed_", coding_variables[[index]]),
+      paste0("proposed_variable_", index, "_"),
+      length(fields) + index,
+      paste("Proposed code for", coding_variables[[index]])
+    )
+  })
+  fields <- c(fields, proposed_fields)
+  variable_fields <- coding_variable_fields(
+    coding_variables, codebook_files, storage_offset = length(fields)
   )
-  choices <- prepare_codebook_choices(codebook, FALSE)
+  fields <- c(fields, variable_fields$fields)
 
   data <- load_coding_data(
     data_file,
     unique(c(
-      inductive_data_columns(participant_id_column),
+      deductive_data_columns(participant_id_column),
       display_columns
     )),
     participant_id_column
   )
 
-  fields <- familiarization_fields(
-    proposed_event_id = "event_new",
-    existing_code_choices = choices
-  )
   participant_data <- select_participant_data(
     data,
     participant_id_column,
@@ -291,9 +270,10 @@ create_inductive_phase2_mode <- function(
     coding_path = coding_path,
     fields = fields,
     column_order = c(display_columns, field_columns(fields)),
+    show_levels = variable_fields$show_levels,
     intro = paste(
-      "Code the data while refining and applying the developing",
-      "event codebook."
+      "Code the data while refining and applying the developing codebooks for:",
+      paste(coding_variables, collapse = ", ")
     ),
     wrap_html = TRUE
   )
@@ -308,7 +288,7 @@ create_coding_mode <- function(
   codebook_files = NULL,
   display_columns = default_display_columns(mode, participant_id_column),
   participant_id_column = "Participant_ID",
-  coding_variables = standard_deductive_variables()
+  coding_variables = character()
 ) {
   mode_factory <- switch(
     mode,
@@ -326,13 +306,8 @@ create_coding_mode <- function(
     display_columns = display_columns,
     participant_id_column = participant_id_column
   )
-  if (mode == "deductive") {
+  if (mode %in% c("deductive", "inductive_phase2")) {
     arguments$coding_variables <- coding_variables
-    if (missing(display_columns)) {
-      arguments$display_columns <- deductive_data_columns(
-        participant_id_column, coding_variables
-      )
-    }
   }
   do.call(mode_factory, arguments)
 }

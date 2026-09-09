@@ -222,11 +222,8 @@ coding_selectize_field <- function(column, id, storage_column, choices) {
 }
 
 
-familiarization_fields <- function(
-  proposed_event_id,
-  existing_code_choices = NULL
-) {
-  fields <- list(
+familiarization_note_fields <- function() {
+  list(
     coding_text_field(
       "Familiarization note: beep",
       "general",
@@ -238,14 +235,23 @@ familiarization_fields <- function(
       "depth",
       2,
       "Day level"
-    ),
+    )
+  )
+}
+
+
+familiarization_fields <- function(
+  proposed_event_id,
+  existing_code_choices = NULL
+) {
+  fields <- c(familiarization_note_fields(), list(
     coding_text_field(
       "Proposed event code",
       proposed_event_id,
       3,
       "Proposed event code"
     )
-  )
+  ))
 
   if (!is.null(existing_code_choices)) {
     fields <- append(

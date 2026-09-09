@@ -35,84 +35,56 @@ launcher_content <- function() {
       "Choose the coding activity you want to use."
     ),
     shiny::tags$div(
-      class = "mode-options",
-      shiny::radioButtons(
-        "coding_mode",
-        NULL,
-        choices = c(
-          "Deductive coding — apply existing codebooks" = "deductive",
-          "Inductive coding: Phase 1 — familiarize and propose codes" =
-            "inductive_phase1",
-          "Inductive coding: Phase 2 — use the developing codebook" =
-            "inductive_phase2"
+      class = "launcher-setup",
+      shiny::tags$div(
+        class = "mode-options",
+        shiny::radioButtons(
+          "coding_mode",
+          NULL,
+          choices = c(
+            "Deductive coding — apply existing codebooks" = "deductive",
+            "Inductive coding: Phase 1 — familiarize and propose codes" =
+              "inductive_phase1",
+            "Inductive coding: Phase 2 — use the developing codebook" =
+              "inductive_phase2"
+          ),
+          selected = "deductive",
+          width = "100%"
+        )
+      ),
+      shiny::tags$div(
+        class = "launcher-fields",
+        shiny::textInput(
+          "coder",
+          "Coder (user)",
+          placeholder = "Enter your name or coder ID",
+          width = "100%"
         ),
-        selected = "deductive"
-      )
-    ),
-    shiny::tags$div(
-      class = "launcher-fields",
-      shiny::textInput(
-        "coder",
-        "Coder (user)",
-        placeholder = "Enter your name or coder ID"
+        file_picker_control(
+          "choose_data_file",
+          "selected_data_file",
+          "Data file"
+        )
       )
     ),
     shiny::tags$div(
       class = "launcher-files",
-      file_picker_control(
-        "choose_data_file",
-        "selected_data_file",
-        "Data file"
-      ),
       shiny::uiOutput("participant_selection_ui"),
       shiny::uiOutput("display_columns_ui"),
       shiny::tags$div(
         class = "codebook-inputs",
         shiny::conditionalPanel(
-          condition = "input.coding_mode == 'deductive'",
+          condition = "input.coding_mode == 'deductive' || input.coding_mode == 'inductive_phase2'",
           shiny::tags$h2("Coding variables"),
-          shiny::checkboxGroupInput(
-            "deductive_variables",
-            "Standard variables",
-            choices = stats::setNames(names(standard_deductive_variables()),
-                                      standard_deductive_variables()),
-            selected = names(standard_deductive_variables()),
-            inline = TRUE
-          ),
           shiny::tags$div(id = "custom-variables"),
           shiny::textInput(
-            "new_coding_variable", "Additional coding variable",
+            "new_coding_variable", "Coding variable name",
             placeholder = "Enter a variable name, e.g. Emotion", width = "100%"
           ),
           shiny::actionButton("add_coding_variable", "Add variable"),
           shiny::tags$h2("Codebook files"),
-          shiny::tags$p("Supply one codebook for each selected coding variable."),
-          shiny::tags$div(
-            class = "codebook-grid",
-            lapply(names(standard_deductive_variables()), function(id) {
-              shiny::conditionalPanel(
-                condition = sprintf(
-                  "(input.deductive_variables || []).indexOf('%s') >= 0", id
-                ),
-                codebook_input(id, standard_deductive_variables()[[id]])
-              )
-            })
-          ),
+          shiny::tags$p("Supply one codebook for each coding variable you add."),
           shiny::tags$div(id = "custom-codebooks", class = "codebook-grid")
-        )
-      ),
-      shiny::tags$div(
-        class = "codebook-inputs",
-        shiny::conditionalPanel(
-          condition = "input.coding_mode == 'inductive_phase2'",
-          shiny::fileInput(
-            "event_codebook",
-            "Event codebook — select the event codebook file",
-            accept = c(".csv", ".xls", ".xlsx"),
-            buttonLabel = "Browse",
-            placeholder = "No file selected",
-            width = "100%"
-          )
         )
       )
     ),
@@ -133,7 +105,7 @@ ui <- shiny::fluidPage(
         background: #f7faf9;
       }
       .launcher {
-        max-width: 780px;
+        max-width: 960px;
         margin: 8vh auto 0;
         padding: 2.5rem;
         background: white;
@@ -144,8 +116,22 @@ ui <- shiny::fluidPage(
       .launcher h1 {
         margin-bottom: 0.5rem;
       }
-      .mode-options {
-        margin: 2rem 0;
+      .launcher-setup {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        align-items: start;
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+      }
+      .launcher-setup > div {
+        min-width: 0;
+      }
+      .mode-options .shiny-input-container {
+        margin-bottom: 0;
+      }
+      .mode-options .radio:first-child,
+      .mode-options .form-check:first-child {
+        margin-top: 0;
       }
       .mode-options .radio,
       .mode-options .form-check {
@@ -162,9 +148,6 @@ ui <- shiny::fluidPage(
       .mode-options label {
         width: 100%;
         cursor: pointer;
-      }
-      .launcher-fields {
-        margin-bottom: 1.5rem;
       }
       .participant-selection-row {
         display: grid;
@@ -184,8 +167,12 @@ ui <- shiny::fluidPage(
         gap: 0.75rem;
       }
       .native-file-row .shiny-text-output {
+        min-width: 0;
         color: #5f6f69;
         overflow-wrap: anywhere;
+      }
+      .native-file-row .btn {
+        flex-shrink: 0;
       }
       .display-columns-help {
         margin-top: -0.5rem;
@@ -217,6 +204,12 @@ ui <- shiny::fluidPage(
       }
       .custom-variable-row .btn {
         flex-shrink: 0;
+      }
+      @media (max-width: 768px) {
+        .launcher-setup {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
       }
       @media (max-width: 576px) {
         .participant-selection-row,
@@ -254,19 +247,15 @@ server <- function(input, output, session) {
   custom_variables <- shiny::reactiveVal(stats::setNames(character(), character()))
   next_variable_id <- 0L
 
-  selected_deductive_variables <- function() {
-    standard <- standard_deductive_variables()
-    validate_deductive_variables(c(
-      standard[names(standard) %in% input$deductive_variables],
-      custom_variables()
-    ))
+  selected_coding_variables <- function() {
+    validate_coding_variables(custom_variables())
   }
 
   shiny::observeEvent(input$add_coding_variable, {
     label <- trimws(input$new_coding_variable)
     candidate <- tryCatch(
-      validate_deductive_variables(c(
-        standard_deductive_variables(), custom_variables(), new = label
+      validate_coding_variables(c(
+        custom_variables(), new = label
       )),
       error = function(error) {
         shiny::showNotification(conditionMessage(error), type = "warning")
@@ -341,8 +330,8 @@ server <- function(input, output, session) {
       )
     }
 
-    if (mode == "deductive") {
-      files$coding_variables <- selected_deductive_variables()
+    if (mode %in% c("deductive", "inductive_phase2")) {
+      files$coding_variables <- selected_coding_variables()
       files$codebooks <- lapply(names(files$coding_variables), function(id) {
         require_file(input[[paste0(id, "_codebook")]],
                      paste("a codebook for", files$coding_variables[[id]]))
@@ -350,14 +339,6 @@ server <- function(input, output, session) {
       names(files$codebooks) <- names(files$coding_variables)
       return(files)
     }
-
-    files$codebooks <- switch(
-      mode,
-      inductive_phase1 = NULL,
-      inductive_phase2 = list(
-        event = require_file(input$event_codebook, "an event codebook")
-      )
-    )
 
     files
   }
