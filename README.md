@@ -47,10 +47,15 @@ selections:
 5. **Display columns.** After selecting the data file, choose which of
    its columns should appear in the coding table. The columns normally
    used by the selected coding activity are selected by default.
-6. **Codebook file(s).** For deductive coding, select the separate
-   thought, activity, location, and company codebooks. For inductive
-   Phase 2, select the event codebook. This field is not shown for
-   inductive Phase 1 because that activity does not use a codebook.
+6. **Coding variables and codebooks.** For deductive coding, use the
+   checkboxes to choose from Thought, Activity, Location, and Company. To add another coding variable, enter
+   its name and click **Add variable**; repeat for as many variables as
+   needed. See [Create a codebook for a custom variable](#create-a-codebook-for-a-custom-variable)
+   for the required format and examples.
+   Select at least one variable and supply one codebook file for each.
+   Variable names must be unique; spaces and punctuation are converted
+   to dots in saved column names. For inductive Phase 2, select the event
+   codebook. Inductive Phase 1 does not use a codebook.
 7. Click **Start Coding**. The coded CSV is saved automatically in the
    same folder as the selected data file.
 
@@ -77,21 +82,58 @@ first data column is selected initially and can be changed. The app
 orders the selected data by the chosen participant ID column and `Obs`.
 
 All activities require a selected participant ID column plus `Day`,
-`Obs`, `Time1`, `Thought`, `Activity`, `Location`, and `Company`.
-Deductive coding additionally requires `Thought_ENG`, `Activity_ENG`,
-`Location_ENG`, and `Company_ENG`; both inductive phases require
-`Event`.
+`Obs`, and `Time1`. Deductive coding requires the original and `_ENG`
+columns for each selected standard variable (for example, `Thought`
+and `Thought_ENG` when Thought is selected). Custom coding variables
+do not require matching input columns; choose the data to show using
+**Display columns**. Both inductive phases require `Thought`, `Activity`,
+`Location`, `Company`, and `Event`.
 
 The selected activity determines which codebooks are required:
 
-- **Deductive coding** requires separate thought, activity, location,
-  and company codebook files.
+- **Deductive coding** requires one codebook file per selected standard
+  or custom coding variable.
 - **Inductive coding: Phase 1** does not load a codebook.
 - **Inductive coding: Phase 2** requires one event codebook file.
 
 Codebooks must contain a column named `Code`. The deductive thought and
-activity codebooks must also contain a `Level` column; those levels are
-displayed in different colors.
+activity codebooks must also contain a `Level` column. For other
+deductive codebooks, `Level` is optional. Levels are displayed in
+different colors when supplied.
+
+### Create a codebook for a custom variable
+
+Create a spreadsheet with a column headed exactly `Code` and enter one
+selectable code per row. For example, a codebook for a custom variable
+named **Emotion** could contain:
+
+```csv
+Code
+Happiness
+Sadness
+Anger
+```
+
+If your codes have a hierarchy, add an optional column headed exactly
+`Level`, using `1`, `2`, or `3` to give each level a distinct display
+color. For example:
+
+```csv
+Code,Level
+Positive emotion,1
+Happiness,2
+Excitement,2
+Negative emotion,1
+Sadness,2
+```
+
+Save the codebook as a comma-separated CSV (`.csv`) or an Excel file
+(`.xls` or `.xlsx`). For Excel, put the codebook on the first worksheet,
+with the column headers in the first row. On the app's start screen,
+choose **Deductive coding**, enter **Emotion** under **Additional coding
+variable**, and click **Add variable**. Then select your file in the
+**Emotion codebook** picker. Create and supply a separate codebook for
+each custom variable you add.
 
 ## Coder and participant result files
 
@@ -107,6 +149,13 @@ Each result file contains the selected participant's complete input
 data followed by the coding columns. If a merged result file already
 exists, it is loaded so coding can continue where it stopped. Otherwise,
 the app creates it with empty (`NA`) coding values.
+
+Deductive results include a `Code_<variable name>` column for each
+selected variable, plus the general and depth comment columns. When
+resuming with a different variable selection, existing codes are matched
+by column name, newly selected variables get empty columns, and saved
+columns for deselected variables are preserved. Use the same custom
+variable names to resume their coding.
 
 ## Analyze the data
 

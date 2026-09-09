@@ -15,6 +15,17 @@ file_picker_control <- function(input_id, output_id, label) {
   )
 }
 
+codebook_input <- function(id, label) {
+  shiny::fileInput(
+    paste0(id, "_codebook"),
+    paste(label, "codebook"),
+    accept = c(".csv", ".xls", ".xlsx"),
+    buttonLabel = "Browse",
+    placeholder = "No file selected",
+    width = "100%"
+  )
+}
+
 launcher_content <- function() {
   shiny::tags$div(
     class = "launcher",
@@ -59,42 +70,35 @@ launcher_content <- function() {
         class = "codebook-inputs",
         shiny::conditionalPanel(
           condition = "input.coding_mode == 'deductive'",
+          shiny::tags$h2("Coding variables"),
+          shiny::checkboxGroupInput(
+            "deductive_variables",
+            "Standard variables",
+            choices = stats::setNames(names(standard_deductive_variables()),
+                                      standard_deductive_variables()),
+            selected = names(standard_deductive_variables()),
+            inline = TRUE
+          ),
+          shiny::tags$div(id = "custom-variables"),
+          shiny::textInput(
+            "new_coding_variable", "Additional coding variable",
+            placeholder = "Enter a variable name, e.g. Emotion", width = "100%"
+          ),
+          shiny::actionButton("add_coding_variable", "Add variable"),
           shiny::tags$h2("Codebook files"),
+          shiny::tags$p("Supply one codebook for each selected coding variable."),
           shiny::tags$div(
             class = "codebook-grid",
-            shiny::fileInput(
-              "thought_codebook",
-              "Thought codebook — select the thought codebook file",
-              accept = c(".csv", ".xls", ".xlsx"),
-              buttonLabel = "Browse",
-              placeholder = "No file selected",
-              width = "100%"
-            ),
-            shiny::fileInput(
-              "activity_codebook",
-              "Activity codebook — select the activity codebook file",
-              accept = c(".csv", ".xls", ".xlsx"),
-              buttonLabel = "Browse",
-              placeholder = "No file selected",
-              width = "100%"
-            ),
-            shiny::fileInput(
-              "location_codebook",
-              "Location codebook — select the location codebook file",
-              accept = c(".csv", ".xls", ".xlsx"),
-              buttonLabel = "Browse",
-              placeholder = "No file selected",
-              width = "100%"
-            ),
-            shiny::fileInput(
-              "company_codebook",
-              "Company codebook — select the company codebook file",
-              accept = c(".csv", ".xls", ".xlsx"),
-              buttonLabel = "Browse",
-              placeholder = "No file selected",
-              width = "100%"
-            )
-          )
+            lapply(names(standard_deductive_variables()), function(id) {
+              shiny::conditionalPanel(
+                condition = sprintf(
+                  "(input.deductive_variables || []).indexOf('%s') >= 0", id
+                ),
+                codebook_input(id, standard_deductive_variables()[[id]])
+              )
+            })
+          ),
+          shiny::tags$div(id = "custom-codebooks", class = "codebook-grid")
         )
       ),
       shiny::tags$div(
@@ -200,6 +204,20 @@ ui <- shiny::fluidPage(
       .codebook-grid .form-group {
         min-width: 0;
       }
+      .custom-variable-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      .custom-variable-row span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .custom-variable-row .btn {
+        flex-shrink: 0;
+      }
       @media (max-width: 576px) {
         .participant-selection-row,
         .codebook-grid {
@@ -233,6 +251,59 @@ server <- function(input, output, session) {
   data_file_columns <- shiny::reactiveVal(NULL)
   initial_participant_id_column <- shiny::reactiveVal(NULL)
   initial_display_columns <- shiny::reactiveVal(character())
+  custom_variables <- shiny::reactiveVal(stats::setNames(character(), character()))
+  next_variable_id <- 0L
+
+  selected_deductive_variables <- function() {
+    standard <- standard_deductive_variables()
+    validate_deductive_variables(c(
+      standard[names(standard) %in% input$deductive_variables],
+      custom_variables()
+    ))
+  }
+
+  shiny::observeEvent(input$add_coding_variable, {
+    label <- trimws(input$new_coding_variable)
+    candidate <- tryCatch(
+      validate_deductive_variables(c(
+        standard_deductive_variables(), custom_variables(), new = label
+      )),
+      error = function(error) {
+        shiny::showNotification(conditionMessage(error), type = "warning")
+        NULL
+      }
+    )
+    if (is.null(candidate)) return()
+
+    next_variable_id <<- next_variable_id + 1L
+    id <- paste0("custom_", next_variable_id)
+    custom_variables(c(custom_variables(), stats::setNames(label, id)))
+    shiny::insertUI(
+      selector = "#custom-variables", where = "beforeEnd",
+      ui = shiny::tags$div(
+        id = paste0(id, "_variable_row"), class = "custom-variable-row",
+        shiny::tags$span(label),
+        shiny::actionButton(
+          paste0("remove_", id), "Remove",
+          class = "btn-sm", `aria-label` = paste("Remove", label)
+        )
+      )
+    )
+    shiny::insertUI(
+      selector = "#custom-codebooks", where = "beforeEnd",
+      ui = shiny::tags$div(
+        id = paste0(id, "_row"),
+        codebook_input(id, label)
+      )
+    )
+    shiny::updateTextInput(session, "new_coding_variable", value = "")
+    remove_observer <- shiny::observeEvent(input[[paste0("remove_", id)]], {
+      custom_variables(custom_variables()[names(custom_variables()) != id])
+      shiny::removeUI(selector = paste0("#", id, "_variable_row"))
+      shiny::removeUI(selector = paste0("#", id, "_row"))
+      remove_observer$destroy()
+    }, ignoreInit = TRUE)
+  }, ignoreInit = TRUE)
 
   require_file <- function(file, label) {
     if (is.null(file) || nrow(file) != 1 || !nzchar(file$datapath[[1]])) {
@@ -270,26 +341,18 @@ server <- function(input, output, session) {
       )
     }
 
+    if (mode == "deductive") {
+      files$coding_variables <- selected_deductive_variables()
+      files$codebooks <- lapply(names(files$coding_variables), function(id) {
+        require_file(input[[paste0(id, "_codebook")]],
+                     paste("a codebook for", files$coding_variables[[id]]))
+      })
+      names(files$codebooks) <- names(files$coding_variables)
+      return(files)
+    }
+
     files$codebooks <- switch(
       mode,
-      deductive = list(
-        thought = require_file(
-          input$thought_codebook,
-          "a thought codebook"
-        ),
-        activity = require_file(
-          input$activity_codebook,
-          "an activity codebook"
-        ),
-        location = require_file(
-          input$location_codebook,
-          "a location codebook"
-        ),
-        company = require_file(
-          input$company_codebook,
-          "a company codebook"
-        )
-      ),
       inductive_phase1 = NULL,
       inductive_phase2 = list(
         event = require_file(input$event_codebook, "an event codebook")
@@ -519,7 +582,8 @@ server <- function(input, output, session) {
         data_file = files$data,
         codebook_files = files$codebooks,
         display_columns = files$display_columns,
-        participant_id_column = files$participant_id_column
+        participant_id_column = files$participant_id_column,
+        coding_variables = files$coding_variables
       ),
       error = function(error) {
         shiny::showModal(shiny::modalDialog(

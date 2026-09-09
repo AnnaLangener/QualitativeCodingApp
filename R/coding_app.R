@@ -307,6 +307,12 @@ initialize_coding_storage <- function(
     dirname(data_path),
     paste0(coding_filename, ".csv")
   )
+  storage_names <- make.names(storage_columns)
+  if (anyDuplicated(storage_names) ||
+      any(storage_names %in% names(participant_data)) ||
+      any(storage_columns %in% names(participant_data))) {
+    stop("Coding column names must be unique and must not overlap with input data columns.")
+  }
   if (!file.exists(coding_path)) {
     coding_data <- as.data.frame(
       matrix(
@@ -315,10 +321,22 @@ initialize_coding_storage <- function(
         ncol = length(storage_columns)
       )
     )
-    names(coding_data) <- make.names(storage_columns, unique = TRUE)
+    names(coding_data) <- storage_names
 
     merged_data <- cbind(participant_data, coding_data)
     utils::write.csv(merged_data, coding_path, row.names = FALSE)
+  } else {
+    merged_data <- utils::read.csv(coding_path, check.names = FALSE)
+    if (anyDuplicated(names(merged_data))) {
+      stop("The saved result file must have unique column names.")
+    }
+    missing_columns <- setdiff(storage_names, names(merged_data))
+    if (length(missing_columns) > 0) {
+      for (column in missing_columns) {
+        merged_data[[column]] <- NA_character_
+      }
+      utils::write.csv(merged_data, coding_path, row.names = FALSE)
+    }
   }
 
   coding_path
@@ -532,12 +550,10 @@ render_coding_widgets <- function(output, participant_data, saved_data, fields) 
 
 read_saved_coding_data <- function(
   coding_path,
-  data_column_count,
-  storage_column_count
+  storage_columns
 ) {
   saved_data <- utils::read.csv(coding_path, check.names = FALSE)
-  coding_indices <- data_column_count + seq_len(storage_column_count)
-  saved_data[, coding_indices, drop = FALSE]
+  saved_data[, make.names(storage_columns), drop = FALSE]
 }
 
 
@@ -545,16 +561,14 @@ register_save_observer <- function(
   input,
   row,
   coding_path,
-  field,
-  data_column_count
+  field
 ) {
   input_id <- paste0(field$input_prefix, row)
-  storage_column <- field$storage_column
+  storage_column <- make.names(field$column)
 
   shiny::observeEvent(input[[input_id]], {
     saved_data <- utils::read.csv(coding_path, check.names = FALSE)
-    coding_column <- data_column_count + storage_column
-    saved_data[row, coding_column] <- paste(
+    saved_data[row, storage_column] <- paste(
       input[[input_id]],
       collapse = " ; "
     )
@@ -569,15 +583,13 @@ register_save_observers <- function(
   coding_path,
   fields
 ) {
-  data_column_count <- ncol(participant_data)
   for (field in fields) {
     for (row in seq_len(nrow(participant_data))) {
       register_save_observer(
         input,
         row,
         coding_path,
-        field,
-        data_column_count
+        field
       )
     }
   }
@@ -604,8 +616,7 @@ coding_server <- function(
     shiny::observeEvent(input$Act_participant_rows_current, {
       saved_data <- read_saved_coding_data(
         coding_path,
-        ncol(participant_data),
-        length(fields)
+        field_columns(fields)
       )
       print("Act dataframe reloaded")
       print(utils::head(saved_data))
