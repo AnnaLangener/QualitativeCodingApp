@@ -1,5 +1,6 @@
 source(file.path("R", "coding_app.R"))
 source(file.path("R", "coding_modes.R"))
+source(file.path("R", "session_settings.R"))
 
 options(shiny.maxRequestSize = 100 * 1024^2)
 
@@ -15,13 +16,13 @@ file_picker_control <- function(input_id, output_id, label) {
   )
 }
 
-codebook_input <- function(id, label) {
+codebook_input <- function(id, label, embedded = FALSE) {
   shiny::fileInput(
     paste0(id, "_codebook"),
     paste(label, "codebook"),
     accept = c(".csv", ".xls", ".xlsx"),
     buttonLabel = "Browse",
-    placeholder = "No file selected",
+    placeholder = if (embedded) "[using codes from json settings file]" else "No file selected",
     width = "100%"
   )
 }
@@ -30,6 +31,9 @@ launcher_content <- function() {
   shiny::tags$div(
     class = "launcher",
     shiny::tags$h1("Qualitative Coding"),
+    file_picker_control("choose_settings_file", "selected_settings_file",
+                        "Load session settings JSON"),
+    shiny::uiOutput("settings_status"),
     shiny::tags$p(
       class = "lead",
       "Choose the coding activity you want to use."
@@ -246,24 +250,18 @@ server <- function(input, output, session) {
   initial_display_columns <- shiny::reactiveVal(character())
   custom_variables <- shiny::reactiveVal(stats::setNames(character(), character()))
   next_variable_id <- 0L
+  imported_settings <- shiny::reactiveVal(NULL)
+  imported_settings_path <- shiny::reactiveVal(NULL)
+  resume_settings <- shiny::reactiveVal(NULL)
+  embedded_codebooks <- shiny::reactiveVal(list())
+  pending_start <- shiny::reactiveVal(NULL)
+  initial_participant_id <- shiny::reactiveVal(NULL)
 
   selected_coding_variables <- function() {
     validate_coding_variables(custom_variables())
   }
 
-  shiny::observeEvent(input$add_coding_variable, {
-    label <- trimws(input$new_coding_variable)
-    candidate <- tryCatch(
-      validate_coding_variables(c(
-        custom_variables(), new = label
-      )),
-      error = function(error) {
-        shiny::showNotification(conditionMessage(error), type = "warning")
-        NULL
-      }
-    )
-    if (is.null(candidate)) return()
-
+  add_variable <- function(label, codebook = NULL, locked = FALSE) {
     next_variable_id <<- next_variable_id + 1L
     id <- paste0("custom_", next_variable_id)
     custom_variables(c(custom_variables(), stats::setNames(label, id)))
@@ -272,7 +270,7 @@ server <- function(input, output, session) {
       ui = shiny::tags$div(
         id = paste0(id, "_variable_row"), class = "custom-variable-row",
         shiny::tags$span(label),
-        shiny::actionButton(
+        if (locked) shiny::tags$small("Existing variable") else shiny::actionButton(
           paste0("remove_", id), "Remove",
           class = "btn-sm", `aria-label` = paste("Remove", label)
         )
@@ -282,16 +280,34 @@ server <- function(input, output, session) {
       selector = "#custom-codebooks", where = "beforeEnd",
       ui = shiny::tags$div(
         id = paste0(id, "_row"),
-        codebook_input(id, label)
+        if (locked) shiny::tags$p(paste(label, "codebook: [using codes from json settings file]")) else
+          codebook_input(id, label, embedded = !is.null(codebook))
       )
     )
+    books <- embedded_codebooks()
+    books[id] <- list(codebook)
+    embedded_codebooks(books)
     shiny::updateTextInput(session, "new_coding_variable", value = "")
     remove_observer <- shiny::observeEvent(input[[paste0("remove_", id)]], {
+      if (locked) return()
       custom_variables(custom_variables()[names(custom_variables()) != id])
+      books <- embedded_codebooks()
+      books[id] <- NULL
+      embedded_codebooks(books)
       shiny::removeUI(selector = paste0("#", id, "_variable_row"))
       shiny::removeUI(selector = paste0("#", id, "_row"))
       remove_observer$destroy()
     }, ignoreInit = TRUE)
+  }
+
+  shiny::observeEvent(input$add_coding_variable, {
+    label <- trimws(input$new_coding_variable)
+    candidate <- tryCatch(validate_coding_variables(c(custom_variables(), new = label)),
+      error = function(error) {
+        shiny::showNotification(conditionMessage(error), type = "warning")
+        NULL
+      })
+    if (!is.null(candidate)) add_variable(label)
   }, ignoreInit = TRUE)
 
   require_file <- function(file, label) {
@@ -333,6 +349,9 @@ server <- function(input, output, session) {
     files$coding_variables <- selected_coding_variables()
     if (mode %in% c("deductive", "inductive_phase2")) {
       files$codebooks <- lapply(names(files$coding_variables), function(id) {
+        if (is.null(input[[paste0(id, "_codebook")]]) && !is.null(embedded_codebooks()[[id]])) {
+          return(embedded_codebooks()[[id]])
+        }
         require_file(input[[paste0(id, "_codebook")]],
                      paste("a codebook for", files$coding_variables[[id]]))
       })
@@ -348,11 +367,102 @@ server <- function(input, output, session) {
     if (is.null(path)) "No file selected" else basename(path)
   })
 
+  output$selected_settings_file <- shiny::renderText({
+    path <- imported_settings_path()
+    if (is.null(path)) "No settings file selected" else basename(path)
+  })
+
+  output$settings_status <- shiny::renderUI({
+    if (is.null(imported_settings())) return(NULL)
+    shiny::tagList(
+      shiny::tags$p(if (is.null(resume_settings()))
+        "Using settings as a template. Select a data file and edit any settings before starting a new session." else
+        "Continuing the saved session. Select the original data file, then click Continue Coding. You may add coding variables; existing variables and other settings must be kept."),
+      shiny::tags$p(paste("Original data file:", imported_settings()$source$name)),
+      if (!is.null(resume_settings())) shiny::actionButton("use_settings_template", "Use as template instead")
+    )
+  })
+
+  apply_settings <- function(settings, resume = FALSE) {
+    resume_settings(if (resume) settings else NULL)
+    shiny::updateActionButton(session, "start_mode",
+                              label = if (resume) "Continue Coding" else "Start Coding")
+    data_file(NULL)
+    data_file_contents(NULL)
+    data_file_columns(NULL)
+    initial_participant_id_column(settings$participant$column)
+    initial_participant_id(settings$participant$id)
+    initial_display_columns(unlist(settings$display_columns, use.names = FALSE))
+    shiny::updateRadioButtons(session, "coding_mode", selected = settings$activity)
+    shiny::updateTextInput(session, "coder", value = settings$coder)
+    for (id in names(custom_variables())) {
+      shiny::removeUI(selector = paste0("#", id, "_variable_row"))
+      shiny::removeUI(selector = paste0("#", id, "_row"))
+    }
+    custom_variables(stats::setNames(character(), character()))
+    embedded_codebooks(list())
+    for (variable in settings$coding_variables) {
+      add_variable(variable$name, variable$codebook, locked = resume)
+    }
+  }
+
+  shiny::observeEvent(input$choose_settings_file, {
+    tryCatch({
+      path <- choose_tabular_file("Select coding-session JSON settings", json = TRUE)
+      if (is.null(path)) return()
+      settings <- read_session_settings(path)
+      imported_settings(settings)
+      imported_settings_path(path)
+      apply_settings(settings)
+      saved_path <- file.path(dirname(path), settings$output$name)
+      if (file.exists(saved_path)) {
+        shiny::showModal(shiny::modalDialog(
+          title = "Existing coding session found",
+          shiny::tags$p(paste("Found", settings$output$name)),
+          shiny::tags$p("Continue coding with the saved values, or edit the settings to start a new session?"),
+          footer = shiny::tagList(
+            shiny::actionButton("use_settings_template", "Edit settings for a new session"),
+            shiny::actionButton("continue_settings_session", "Continue coding")
+          )
+        ))
+      }
+    }, error = function(error) shiny::showNotification(conditionMessage(error), type = "error", duration = NULL))
+  }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$use_settings_template, {
+    shiny::req(imported_settings())
+    apply_settings(imported_settings())
+    shiny::removeModal()
+  }, ignoreInit = TRUE)
+
+  shiny::observeEvent(input$continue_settings_session, {
+    settings <- imported_settings()
+    shiny::req(settings)
+    path <- file.path(dirname(imported_settings_path()), settings$output$name)
+    matches <- tryCatch(file.exists(path) && identical(output_hash(path), settings$output$sha256),
+                        error = function(error) FALSE)
+    if (!matches) {
+      shiny::showModal(shiny::modalDialog(
+        title = "Continuation is not permitted",
+        "The output data does not match the hash in the JSON settings file.",
+        footer = shiny::actionButton("use_settings_template", "Use settings as a template")
+      ))
+      return()
+    }
+    apply_settings(settings, resume = TRUE)
+    shiny::removeModal()
+  }, ignoreInit = TRUE)
+
   output$participant_selection_ui <- shiny::renderUI({
     columns <- data_file_columns()
     data <- data_file_contents()
     id_column <- initial_participant_id_column()
-    if (is.null(columns) || is.null(data) || is.null(id_column)) {
+    settings <- imported_settings()
+    if (is.null(data) && !is.null(settings)) {
+      columns <- settings$participant$column
+      id_column <- settings$participant$column
+    }
+    if (is.null(columns) || is.null(id_column)) {
       return(NULL)
     }
 
@@ -370,7 +480,8 @@ server <- function(input, output, session) {
       shiny::selectizeInput(
         "participant_id",
         "Participant ID to code",
-        choices = participant_id_choices(data, id_column),
+        choices = if (is.null(data)) settings$participant$id else participant_id_choices(data, id_column),
+        selected = initial_participant_id(),
         multiple = FALSE,
         options = list(placeholder = "Choose a participant"),
         width = "100%"
@@ -390,6 +501,10 @@ server <- function(input, output, session) {
 
     choices <- participant_id_choices(data, id_column)
     selected <- input$participant_id
+    preferred <- initial_participant_id()
+    if (!is.null(preferred) && preferred %in% choices) {
+      selected <- preferred
+    }
     if (is.null(selected) || !selected %in% choices) {
       selected <- if (length(choices) > 0) choices[[1]] else character()
     }
@@ -404,6 +519,9 @@ server <- function(input, output, session) {
 
   output$display_columns_ui <- shiny::renderUI({
     columns <- data_file_columns()
+    if (is.null(columns) && !is.null(imported_settings())) {
+      columns <- unlist(imported_settings()$display_columns, use.names = FALSE)
+    }
     if (is.null(columns)) {
       return(NULL)
     }
@@ -428,23 +546,7 @@ server <- function(input, output, session) {
     )
   })
 
-  shiny::observeEvent(input$choose_data_file, {
-    clicks <- input$choose_data_file
-    if (is.null(clicks) || clicks < 1) {
-      return()
-    }
-
-    path <- tryCatch(
-      choose_tabular_file("Select the ESM data file to open"),
-      error = function(error) {
-        shiny::showNotification(conditionMessage(error), type = "warning")
-        NULL
-      }
-    )
-    if (is.null(path)) {
-      return()
-    }
-
+  load_selected_data <- function(path) {
     data <- tryCatch(
       read_tabular_file(path, "The data file"),
       error = function(error) {
@@ -481,11 +583,40 @@ server <- function(input, output, session) {
       default_display_columns(input$coding_mode, id_column),
       columns
     )
+    settings <- imported_settings()
+    if (!is.null(settings)) {
+      if (settings$participant$column %in% columns) id_column <- settings$participant$column
+      defaults <- intersect(unlist(settings$display_columns, use.names = FALSE), columns)
+      initial_participant_id(settings$participant$id)
+      if (!all(c(settings$participant$column, unlist(settings$display_columns)) %in% columns)) {
+        shiny::showNotification("Some imported columns are missing from this data file. Review the participant and display columns.", type = "warning")
+      }
+    }
     data_file(path)
     data_file_contents(data)
     initial_participant_id_column(id_column)
     initial_display_columns(defaults)
     data_file_columns(columns)
+  }
+
+  shiny::observeEvent(input$choose_data_file, {
+    clicks <- input$choose_data_file
+    if (is.null(clicks) || clicks < 1) {
+      return()
+    }
+
+    path <- tryCatch(
+      choose_tabular_file("Select the ESM data file to open"),
+      error = function(error) {
+        shiny::showNotification(conditionMessage(error), type = "warning")
+        NULL
+      }
+    )
+    if (is.null(path)) {
+      return()
+    }
+
+    load_selected_data(path)
   }, ignoreNULL = FALSE)
 
   output$root_ui <- shiny::renderUI({
@@ -555,35 +686,55 @@ server <- function(input, output, session) {
       return()
     }
 
-    mode <- tryCatch(
-      create_coding_mode(
-        mode = input$coding_mode,
-        user = coder,
-        participant_id = participant_id,
-        data_file = files$data,
-        codebook_files = files$codebooks,
-        display_columns = files$display_columns,
-        participant_id_column = files$participant_id_column,
-        coding_variables = files$coding_variables
-      ),
-      error = function(error) {
-        shiny::showModal(shiny::modalDialog(
-          title = "The coding activity could not be started",
-          shiny::tags$p(conditionMessage(error)),
-          shiny::tags$p(paste(
-            "Check that the selected files have the expected format",
-            "and that the data file's folder is writable."
-          )),
-          easyClose = TRUE,
-          footer = shiny::modalButton("Close")
-        ))
-        NULL
-      }
+    arguments <- list(
+      mode = input$coding_mode, user = coder, participant_id = participant_id,
+      data_file = files$data, codebook_files = files$codebooks,
+      display_columns = files$display_columns,
+      participant_id_column = files$participant_id_column,
+      coding_variables = files$coding_variables
     )
-    shiny::req(!is.null(mode))
+    if (!is.null(resume_settings())) {
+      arguments$resume_settings <- resume_settings()
+      arguments$coding_path <- file.path(dirname(imported_settings_path()), resume_settings()$output$name)
+      launch_session(arguments)
+      return()
+    }
+    path <- coding_output_path(files$data, coder, participant_id)
+    if (output_path_taken(path)) {
+      arguments$coding_path <- next_output_path(path)
+      pending_start(arguments)
+      shiny::showModal(shiny::modalDialog(
+        title = "Output filename already exists",
+        shiny::tags$p("A CSV or JSON settings file already uses this name. Confirm to start a new session with empty coding values under:"),
+        shiny::tags$strong(basename(arguments$coding_path)),
+        footer = shiny::tagList(shiny::modalButton("Cancel"),
+          shiny::actionButton("confirm_new_session", "Confirm new session"))
+      ))
+    } else {
+      arguments$coding_path <- path
+      launch_session(arguments)
+    }
+  }, ignoreInit = TRUE)
 
+  launch_session <- function(arguments) {
+    mode <- tryCatch(do.call(create_coding_mode, arguments), error = function(error) {
+      shiny::showModal(shiny::modalDialog(
+        title = "The coding activity could not be started",
+        shiny::tags$p(conditionMessage(error)), easyClose = TRUE,
+        footer = shiny::modalButton("Close")
+      ))
+      NULL
+    })
+    if (is.null(mode)) return()
+    shiny::removeModal()
     mode$server(input, output, session)
     active_mode(mode)
+  }
+
+  shiny::observeEvent(input$confirm_new_session, {
+    arguments <- pending_start()
+    pending_start(NULL)
+    if (!is.null(arguments)) launch_session(arguments)
   }, ignoreInit = TRUE)
 
   shiny::observeEvent(input$change_mode, {

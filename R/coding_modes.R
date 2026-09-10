@@ -118,7 +118,8 @@ create_deductive_mode <- function(
   codebook_files,
   display_columns = deductive_data_columns(participant_id_column),
   participant_id_column = "Participant_ID",
-  coding_variables = character()
+  coding_variables = character(),
+  storage = NULL
 ) {
   coding_variables <- validate_coding_variables(coding_variables)
   variable_fields <- coding_variable_fields(coding_variables, codebook_files)
@@ -150,11 +151,9 @@ create_deductive_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    data_file = data_file,
-    user = user,
-    participant_id = participant_id,
     participant_data = participant_data,
-    storage_columns = field_columns(fields)
+    storage_columns = field_columns(fields),
+    storage = storage
   )
 
   column_order <- c(display_columns, field_columns(fields))
@@ -179,7 +178,8 @@ create_inductive_phase1_mode <- function(
   codebook_files = NULL,
   display_columns = inductive_data_columns(participant_id_column),
   participant_id_column = "Participant_ID",
-  coding_variables = character()
+  coding_variables = character(),
+  storage = NULL
 ) {
   coding_variables <- validate_coding_variables(coding_variables)
   data <- load_coding_data(
@@ -201,11 +201,9 @@ create_inductive_phase1_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    data_file = data_file,
-    user = user,
-    participant_id = participant_id,
     participant_data = participant_data,
-    storage_columns = field_columns(fields)
+    storage_columns = field_columns(fields),
+    storage = storage
   )
 
   new_coding_mode(
@@ -229,7 +227,8 @@ create_inductive_phase2_mode <- function(
   codebook_files,
   display_columns = inductive_data_columns(participant_id_column),
   participant_id_column = "Participant_ID",
-  coding_variables = character()
+  coding_variables = character(),
+  storage = NULL
 ) {
   coding_variables <- validate_coding_variables(coding_variables)
   fields <- familiarization_note_fields()
@@ -256,11 +255,9 @@ create_inductive_phase2_mode <- function(
     participant_id
   )
   coding_path <- initialize_coding_storage(
-    data_file = data_file,
-    user = user,
-    participant_id = participant_id,
     participant_data = participant_data,
-    storage_columns = field_columns(fields)
+    storage_columns = field_columns(fields),
+    storage = storage
   )
 
   new_coding_mode(
@@ -287,7 +284,9 @@ create_coding_mode <- function(
   codebook_files = NULL,
   display_columns = default_display_columns(mode, participant_id_column),
   participant_id_column = "Participant_ID",
-  coding_variables = character()
+  coding_variables = character(),
+  coding_path = coding_output_path(data_file, user, participant_id),
+  resume_settings = NULL
 ) {
   mode_factory <- switch(
     mode,
@@ -297,14 +296,43 @@ create_coding_mode <- function(
     stop("Unknown coding activity: ", mode)
   )
 
+  coding_variables <- validate_coding_variables(coding_variables)
+  codebooks <- lapply(names(coding_variables), function(id) {
+    if (mode == "inductive_phase1") return(NULL)
+    if (is.null(codebook_files[[id]])) stop("Select a codebook for ", coding_variables[[id]], ".")
+    codebook_settings(codebook_files[[id]], paste("The", coding_variables[[id]], "codebook"))
+  })
+  names(codebooks) <- names(coding_variables)
+  settings <- new_session_settings(mode, user, data_file, coding_path,
+    participant_id_column, participant_id, display_columns, coding_variables, codebooks)
+  if (!is.null(resume_settings)) {
+    verify_session_files(resume_settings, data_file, coding_path)
+    # Existing variables and their codebooks remain intact; new variables may be added.
+    expected <- resume_settings
+    expected$source <- settings$source
+    expected$output <- settings$output
+    expected$started_at <- settings$started_at
+    previous_count <- length(expected$coding_variables)
+    current <- settings
+    current$coding_variables <- head(current$coding_variables, previous_count)
+    if (length(settings$coding_variables) < previous_count || !identical(expected, current)) {
+      stop("Continuation keeps the original settings and coding variables. You may add new variables; use the JSON as a template to remove variables or change other settings.")
+    }
+    settings$started_at <- resume_settings$started_at
+    settings$source <- resume_settings$source
+  }
+  previous_columns <- if (is.null(resume_settings)) NULL else
+    session_storage_columns(resume_settings)
   arguments <- list(
     user = user,
     participant_id = participant_id,
     data_file = data_file,
-    codebook_files = codebook_files,
+    codebook_files = codebooks,
     display_columns = display_columns,
     participant_id_column = participant_id_column,
-    coding_variables = coding_variables
+    coding_variables = coding_variables,
+    storage = list(path = coding_path, settings = settings, resume = !is.null(resume_settings),
+                   previous_columns = previous_columns)
   )
   do.call(mode_factory, arguments)
 }

@@ -34,6 +34,9 @@ All three coding activities are available from one start screen. Open
 `app.R` in RStudio, click **Run App**, and make the following
 selections:
 
+Optionally, use **Load session settings** at the very top to select a JSON
+sidecar from an earlier session. See [Continue coding or reuse settings](#continue-coding-or-reuse-settings).
+
 1. **Coding activity.** Choose **Deductive coding**, **Inductive
    coding: Phase 1**, or **Inductive coding: Phase 2**. This determines
    which codebook and coding fields are shown.
@@ -56,8 +59,10 @@ selections:
    Variable names must be unique; spaces and punctuation are converted
    to dots in saved column names. Inductive Phase 1 uses free-text fields
    and thus does not require codebooks.
-7. Click **Start Coding**. The coded CSV is saved automatically in the
-   same folder as the selected data file.
+7. Click **Start Coding**. The coded CSV and its JSON settings sidecar are
+   saved automatically in the same folder as the selected data file.
+   If the filename is already taken, the app proposes a numbered name
+   (`_1`, `_2`, etc.) and asks for confirmation before creating the new session.
 
 At least one display column must be selected. Coding-entry columns are
 always included in the table and are not affected by this selection.
@@ -142,9 +147,11 @@ file's name (without its extension), the participant ID, and the coder:
 ```
 
 Each result file contains the selected participant's complete input
-data followed by the coding columns. If a merged result file already
-exists, it is loaded so coding can continue where it stopped. Otherwise,
-the app creates it with empty (`NA`) coding values.
+data followed by the coding columns. New sessions start with empty (`NA`)
+coding values. An existing result is never loaded automatically or
+overwritten when starting a new session. If either the CSV or its JSON
+sidecar already exists, the app offers the first available numbered name,
+such as `<original_name>_<participant_id>_<coder>_1.csv`, for confirmation.
 
 Deductive and inductive Phase 2 results include a `Code_<variable name>`
 column for each selected variable. Deductive coding also includes general
@@ -154,14 +161,58 @@ variable to record proposed new codes. Inductive Phase 1 includes the
 same familiarization notes and a free-text `Proposed_<variable name>`
 field for each variable, without codebook-based coding fields.
 
-When resuming with a different variable selection, existing codes are matched
-by column name, newly selected variables get empty columns, and saved
-columns for removed variables are preserved. Use the same
-variable names to resume their coding.
+### Continue coding or reuse settings
 
-Earlier inductive result files retain their `Proposed.event.code` and,
-for Phase 2, `Existing.event.code` columns. These are preserved in the CSV;
-new sessions use the variable-specific columns described above.
+Every session has a JSON settings file beside its CSV, with the same stem
+(for example, `observations_12_Alex.json` and `observations_12_Alex.csv`).
+Keep these two files together when moving or copying a session.
+
+Select the JSON using **Load session settings** at the top of the start
+screen. If its named output CSV exists beside it, choose between:
+
+- **Continue coding.** The output's content hash must match the JSON.
+  Select the original source data file, then click **Continue Coding**; its
+  content hash is checked too. Existing coding variables and codebooks
+  are kept. You may **add coding variables**, supplying new codebooks
+  where required. These get empty columns, while all existing codes and
+  notes remain intact. Removing or renaming existing variables, replacing
+  their codebooks, or changing other session settings requires a new session.
+  The original start time is retained, and the sidecar records any added variables.
+- **Edit settings for a new session.** The JSON fills the entire form
+  except the data file, which you select yourself. You can change settings,
+  remove variables, and add variables. Imported codebook fields show
+  `[using codes from json settings file]`; **Browse** replaces a codebook
+  with a newly selected file. Starting creates a fresh CSV and JSON pair.
+
+If no matching output CSV exists beside the JSON, the settings are loaded
+as a template. While preparing a continuation, **Use as template instead**
+switches to a new session with editable settings.
+
+Continuation is refused if either the source or output data has changed
+since the recorded hashes. Load the settings as a template to start a new
+session instead. CSV files without these JSON sidecars cannot be resumed;
+the previous automatic restart behavior and old-file compatibility have
+been removed.
+
+### What the JSON contains
+
+The sidecar records its schema and hash format, coding activity, coder,
+UTC start time, source filename and SHA-256 hash, output filename and
+SHA-256 hash, participant column and ID, display columns, and ordered coding
+variables. Each variable that uses a codebook includes the original
+codebook filename and its complete tabular content as CSV text.
+
+Hashes cover tabular content in a consistent UTF-8 CSV representation,
+including column and row order. They exclude file timestamps, spreadsheet
+formatting, and other file metadata. For Excel, the source is the first
+worksheet, matching the data the app loads. The output hash is refreshed
+on every saved coding change and when new variables are added on continuation.
+
+**No source observations, responses, or saved coding values are written
+to the JSON.** It contains only the session settings listed above (including
+the selected participant ID and column names), file hashes, and codebook
+contents. The CSV remains the only output containing participant observations
+and coded responses.
 
 ## Analyze the data
 

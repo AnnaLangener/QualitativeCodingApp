@@ -6,13 +6,15 @@ required_packages <- c(
   "DT",
   "stringr",
   "bslib",
-  "shinycssloaders"
+  "shinycssloaders",
+  "jsonlite",
+  "digest"
 )
 
 invisible(lapply(required_packages, library, character.only = TRUE))
 
 
-choose_tabular_file <- function(caption) {
+choose_tabular_file <- function(caption, json = FALSE) {
   filters <- matrix(
     c(
       "CSV and Excel files", "*.csv;*.xls;*.xlsx",
@@ -21,6 +23,8 @@ choose_tabular_file <- function(caption) {
     ncol = 2,
     byrow = TRUE
   )
+  if (json) filters <- matrix(c("JSON settings files", "*.json", "All files", "*.*"),
+                             ncol = 2, byrow = TRUE)
 
   data_path <- if (.Platform$OS.type == "windows") {
     utils::choose.files(
@@ -139,8 +143,12 @@ load_coding_data <- function(
 
 load_codebook <- function(codebook_file, label, has_levels = FALSE) {
   required_columns <- if (has_levels) c("Code", "Level") else "Code"
-
-  read_tabular_file(codebook_file, label) |>
+  book <- if (is.list(codebook_file) && !is.null(codebook_file$content_csv)) {
+    csv_table(text = codebook_file$content_csv)
+  } else {
+    read_tabular_file(codebook_file, label)
+  }
+  book |>
     require_columns(required_columns, label)
 }
 
@@ -273,37 +281,19 @@ familiarization_column_order <- function(
 
 
 initialize_coding_storage <- function(
-  data_file,
-  user,
-  participant_id,
   participant_data,
-  storage_columns
+  storage_columns,
+  storage
 ) {
-  user <- validate_storage_identifier(user, "Coder")
-  participant_id <- validate_storage_identifier(
-    participant_id,
-    "Participant ID"
-  )
-
-  data_path <- normalizePath(data_file, winslash = "/", mustWork = TRUE)
-  original_name <- tools::file_path_sans_ext(basename(data_path))
-  coding_filename <- paste(
-    original_name,
-    participant_id,
-    user,
-    sep = "_"
-  )
-  coding_path <- file.path(
-    dirname(data_path),
-    paste0(coding_filename, ".csv")
-  )
+  coding_path <- storage$path
   storage_names <- make.names(storage_columns)
   if (anyDuplicated(storage_names) ||
       any(storage_names %in% names(participant_data)) ||
       any(storage_columns %in% names(participant_data))) {
     stop("Coding column names must be unique and must not overlap with input data columns.")
   }
-  if (!file.exists(coding_path)) {
+  if (!storage$resume) {
+    if (output_path_taken(coding_path)) stop("The output filename is already in use. Start again to confirm a new filename.")
     coding_data <- as.data.frame(
       matrix(
         NA,
@@ -314,19 +304,19 @@ initialize_coding_storage <- function(
     names(coding_data) <- storage_names
 
     merged_data <- cbind(participant_data, coding_data)
-    utils::write.csv(merged_data, coding_path, row.names = FALSE)
+    write_session_output(merged_data, coding_path, storage$settings)
   } else {
-    merged_data <- utils::read.csv(coding_path, check.names = FALSE)
-    if (anyDuplicated(names(merged_data))) {
-      stop("The saved result file must have unique column names.")
+    merged_data <- csv_table(coding_path)
+    previous_names <- storage$previous_columns
+    if (!identical(names(merged_data), c(names(participant_data), previous_names)) ||
+        nrow(merged_data) != nrow(participant_data) ||
+        !identical(content_hash(merged_data[, names(participant_data), drop = FALSE]),
+                   content_hash(participant_data))) {
+      stop("Continuation is not permitted: the output rows or columns do not match this session.")
     }
-    missing_columns <- setdiff(storage_names, names(merged_data))
-    if (length(missing_columns) > 0) {
-      for (column in missing_columns) {
-        merged_data[[column]] <- NA_character_
-      }
-      utils::write.csv(merged_data, coding_path, row.names = FALSE)
-    }
+    for (column in setdiff(storage_names, names(merged_data))) merged_data[[column]] <- NA_character_
+    merged_data <- merged_data[, c(names(participant_data), storage_names), drop = FALSE]
+    write_session_output(merged_data, coding_path, storage$settings)
   }
 
   coding_path
@@ -506,6 +496,10 @@ render_coding_widget <- function(output, row, saved_data, field) {
   input_id <- paste0(field$input_prefix, row)
   output_id <- paste0(field$output_prefix, row)
   selected <- saved_values(saved_data[row, field$storage_column])
+  if (field$type == "text") {
+    selected <- saved_data[row, field$storage_column]
+    if (is.na(selected)) selected <- ""
+  }
 
   widget <- if (field$type == "selectize") {
     shiny::selectizeInput(
@@ -542,7 +536,7 @@ read_saved_coding_data <- function(
   coding_path,
   storage_columns
 ) {
-  saved_data <- utils::read.csv(coding_path, check.names = FALSE)
+  saved_data <- csv_table(coding_path)
   saved_data[, make.names(storage_columns), drop = FALSE]
 }
 
@@ -557,13 +551,23 @@ register_save_observer <- function(
   storage_column <- make.names(field$column)
 
   shiny::observeEvent(input[[input_id]], {
-    saved_data <- utils::read.csv(coding_path, check.names = FALSE)
-    saved_data[row, storage_column] <- paste(
-      input[[input_id]],
-      collapse = " ; "
-    )
-    utils::write.csv(saved_data, coding_path, row.names = FALSE)
-  })
+    if (!input_id %in% names(input)) return()
+    tryCatch({
+      settings <- read_session_settings(sidecar_path(coding_path))
+      if (!identical(output_hash(coding_path), settings$output$sha256)) {
+        stop("The output file was changed outside this session.")
+      }
+      saved_data <- csv_table(coding_path)
+      value <- paste(input[[input_id]], collapse = " ; ")
+      if (identical(saved_data[row, storage_column], value) ||
+          (is.na(saved_data[row, storage_column]) && !nzchar(value))) return()
+      saved_data[row, storage_column] <- value
+      write_session_output(saved_data, coding_path, settings)
+    }, error = function(error) {
+      shiny::showNotification(paste("Saving stopped:", conditionMessage(error)),
+                              type = "error", duration = NULL)
+    })
+  }, ignoreNULL = FALSE)
 }
 
 
@@ -608,8 +612,6 @@ coding_server <- function(
         coding_path,
         field_columns(fields)
       )
-      print("Act dataframe reloaded")
-      print(utils::head(saved_data))
 
       render_coding_widgets(
         output,
