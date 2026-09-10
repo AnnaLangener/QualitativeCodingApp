@@ -47,15 +47,15 @@ selections:
 5. **Display columns.** After selecting the data file, choose which of
    its columns should appear in the coding table. The columns normally
    used by the selected coding activity are selected by default.
-6. **Coding variables and codebooks.** For deductive coding and inductive
-   Phase 2, enter each variable name manually and click **Add variable**;
-   repeat for as many
-   variables as needed.
+6. **Coding variables and codebooks.** Enter
+   a coding variable name and click **Add variable**; repeat for as
+   many variables as needed. Add at least one variable. Deductive coding
+   and inductive Phase 2 require one codebook file per variable.
    See [Create a codebook for a variable](#create-a-codebook-for-a-variable)
    for the required format and examples.
-   Add at least one variable and supply one codebook file for each.
    Variable names must be unique; spaces and punctuation are converted
-   to dots in saved column names. Inductive Phase 1 does not use a codebook.
+   to dots in saved column names. Inductive Phase 1 uses free-text fields
+   and thus does not require codebooks.
 7. Click **Start Coding**. The coded CSV is saved automatically in the
    same folder as the selected data file.
 
@@ -82,10 +82,8 @@ first data column is selected initially and can be changed. The app
 orders the selected data by the chosen participant ID column and `Obs`.
 
 All activities require a selected participant ID column plus `Day`,
-`Obs`, and `Time1`. Deductive and inductive Phase 2 coding variables do
-not require matching input columns or translations; choose the data to
-show using **Display columns**. Inductive Phase 1 also requires `Thought`,
-`Activity`, `Location`, `Company`, and `Event`.
+`Obs`, and `Time1`. Coding variables do not require matching input columns
+or translations; choose the data to show using **Display columns**.
 
 The selected activity determines which codebooks are required:
 
@@ -152,16 +150,18 @@ Deductive and inductive Phase 2 results include a `Code_<variable name>`
 column for each selected variable. Deductive coding also includes general
 and depth comment columns. Inductive Phase 2 keeps the beep and day
 familiarization notes and adds a `Proposed_<variable name>` field for each
-variable to record proposed new codes.
+variable to record proposed new codes. Inductive Phase 1 includes the
+same familiarization notes and a free-text `Proposed_<variable name>`
+field for each variable, without codebook-based coding fields.
 
 When resuming with a different variable selection, existing codes are matched
 by column name, newly selected variables get empty columns, and saved
 columns for removed variables are preserved. Use the same
 variable names to resume their coding.
 
-Earlier Phase 2 result files retain their `Existing.event.code` and
-`Proposed.event.code` columns. These are preserved in the CSV; new sessions
-use the variable-specific columns described above.
+Earlier inductive result files retain their `Proposed.event.code` and,
+for Phase 2, `Existing.event.code` columns. These are preserved in the CSV;
+new sessions use the variable-specific columns described above.
 
 ## Analyze the data
 

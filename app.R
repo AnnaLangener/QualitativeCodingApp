@@ -73,15 +73,15 @@ launcher_content <- function() {
       shiny::uiOutput("display_columns_ui"),
       shiny::tags$div(
         class = "codebook-inputs",
+        shiny::tags$h2("Coding variables"),
+        shiny::tags$div(id = "custom-variables"),
+        shiny::textInput(
+          "new_coding_variable", "Coding variable name",
+          placeholder = "Enter a variable name, e.g. Emotion", width = "100%"
+        ),
+        shiny::actionButton("add_coding_variable", "Add variable"),
         shiny::conditionalPanel(
           condition = "input.coding_mode == 'deductive' || input.coding_mode == 'inductive_phase2'",
-          shiny::tags$h2("Coding variables"),
-          shiny::tags$div(id = "custom-variables"),
-          shiny::textInput(
-            "new_coding_variable", "Coding variable name",
-            placeholder = "Enter a variable name, e.g. Emotion", width = "100%"
-          ),
-          shiny::actionButton("add_coding_variable", "Add variable"),
           shiny::tags$h2("Codebook files"),
           shiny::tags$p("Supply one codebook for each coding variable you add."),
           shiny::tags$div(id = "custom-codebooks", class = "codebook-grid")
@@ -330,8 +330,8 @@ server <- function(input, output, session) {
       )
     }
 
+    files$coding_variables <- selected_coding_variables()
     if (mode %in% c("deductive", "inductive_phase2")) {
-      files$coding_variables <- selected_coding_variables()
       files$codebooks <- lapply(names(files$coding_variables), function(id) {
         require_file(input[[paste0(id, "_codebook")]],
                      paste("a codebook for", files$coding_variables[[id]]))

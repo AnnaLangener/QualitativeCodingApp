@@ -240,34 +240,18 @@ familiarization_note_fields <- function() {
 }
 
 
-familiarization_fields <- function(
-  proposed_event_id,
-  existing_code_choices = NULL
+proposed_coding_variable_fields <- function(
+  coding_variables,
+  storage_offset = 0L
 ) {
-  fields <- c(familiarization_note_fields(), list(
+  lapply(seq_along(coding_variables), function(index) {
     coding_text_field(
-      "Proposed event code",
-      proposed_event_id,
-      3,
-      "Proposed event code"
+      paste0("Proposed_", coding_variables[[index]]),
+      paste0("proposed_variable_", index, "_"),
+      storage_offset + index,
+      paste("Proposed code for", coding_variables[[index]])
     )
-  ))
-
-  if (!is.null(existing_code_choices)) {
-    fields <- append(
-      fields,
-      list(
-        coding_selectize_field(
-          "Existing event code",
-          "event_existing",
-          4,
-          existing_code_choices
-        )
-      )
-    )
-  }
-
-  fields
+  })
 }
 
 

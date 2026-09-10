@@ -178,18 +178,23 @@ create_inductive_phase1_mode <- function(
   data_file,
   codebook_files = NULL,
   display_columns = inductive_data_columns(participant_id_column),
-  participant_id_column = "Participant_ID"
+  participant_id_column = "Participant_ID",
+  coding_variables = character()
 ) {
+  coding_variables <- validate_coding_variables(coding_variables)
   data <- load_coding_data(
     data_file,
     unique(c(
-      inductive_data_columns(participant_id_column),
+      deductive_data_columns(participant_id_column),
       display_columns
     )),
     participant_id_column
   )
 
-  fields <- familiarization_fields(proposed_event_id = "event")
+  fields <- familiarization_note_fields()
+  fields <- c(fields, proposed_coding_variable_fields(
+    coding_variables, storage_offset = length(fields)
+  ))
   participant_data <- select_participant_data(
     data,
     participant_id_column,
@@ -211,7 +216,7 @@ create_inductive_phase1_mode <- function(
     column_order = c(display_columns, field_columns(fields)),
     intro = paste(
       "Familiarize yourself with the data and record notes or",
-      "proposed event codes."
+      "proposed codes for:", paste(coding_variables, collapse = ", ")
     )
   )
 }
@@ -228,15 +233,9 @@ create_inductive_phase2_mode <- function(
 ) {
   coding_variables <- validate_coding_variables(coding_variables)
   fields <- familiarization_note_fields()
-  proposed_fields <- lapply(seq_along(coding_variables), function(index) {
-    coding_text_field(
-      paste0("Proposed_", coding_variables[[index]]),
-      paste0("proposed_variable_", index, "_"),
-      length(fields) + index,
-      paste("Proposed code for", coding_variables[[index]])
-    )
-  })
-  fields <- c(fields, proposed_fields)
+  fields <- c(fields, proposed_coding_variable_fields(
+    coding_variables, storage_offset = length(fields)
+  ))
   variable_fields <- coding_variable_fields(
     coding_variables, codebook_files, storage_offset = length(fields)
   )
@@ -304,10 +303,8 @@ create_coding_mode <- function(
     data_file = data_file,
     codebook_files = codebook_files,
     display_columns = display_columns,
-    participant_id_column = participant_id_column
+    participant_id_column = participant_id_column,
+    coding_variables = coding_variables
   )
-  if (mode %in% c("deductive", "inductive_phase2")) {
-    arguments$coding_variables <- coding_variables
-  }
   do.call(mode_factory, arguments)
 }
