@@ -22,9 +22,9 @@ To facilitate the coding process, a list of codes appears when clicking on the �
 <img src="Images/Example_app2.png" width="326" />
 
 To use this app, download the repository and open `app.R` in RStudio
-(<https://posit.co/download/rstudio-desktop/>). The consolidated app
-loads the data and mode-specific codebooks from a project folder that
-you select when starting a coding session.
+(<https://posit.co/download/rstudio-desktop/>). On its start screen, the
+consolidated app lets you select the data and mode-specific codebook
+files for each coding session.
 
 The app runs locally, so there are no privacy concerns when using it.
 
@@ -34,87 +34,185 @@ All three coding activities are available from one start screen. Open
 `app.R` in RStudio, click **Run App**, and make the following
 selections:
 
+Optionally, use **Load session settings** at the very top to select a JSON
+sidecar from an earlier session. See [Continue coding or reuse settings](#continue-coding-or-reuse-settings).
+
 1. **Coding activity.** Choose **Deductive coding**, **Inductive
    coding: Phase 1**, or **Inductive coding: Phase 2**. This determines
-   which codebook and coding fields are shown and where the results are
-   saved.
-2. **Coder (user).** Enter a name or coder ID. A new coder name creates
-   a new results folder. Reusing the same name opens that coder's
-   existing results, if present.
-3. **Participant ID.** Enter an ID exactly as it occurs in the
-   `Participant_ID` column of the data. Only that participant's
-   observations are loaded into the coding table.
-4. Click **Choose project folder and start**, then select the project
-   folder that contains the data and codebooks described below. The app
-   reads the required files from this folder; the data file itself is
-   not selected separately.
+   which codebook and coding fields are shown.
+2. **Coder (user).** Enter a name or coder ID. This becomes part of the
+   coded-data filename so different coders get separate files.
+3. **Data file.** Select the CSV or Excel file containing the ESM data.
+4. **Participant.** Choose the column containing participant IDs, then
+   choose the participant to code from the IDs found in that column.
+   Only that participant's observations are loaded into the coding
+   table.
+5. **Display columns.** After selecting the data file, choose which of
+   its columns should appear in the coding table. The columns normally
+   used by the selected coding activity are selected by default.
+6. **Coding variables and codebooks.** Enter
+   a coding variable name and click **Add variable**; repeat for as
+   many variables as needed. Add at least one variable. Deductive coding
+   and inductive Phase 2 require one codebook file per variable.
+   See [Create a codebook for a variable](#create-a-codebook-for-a-variable)
+   for the required format and examples.
+   Variable names must be unique; spaces and punctuation are converted
+   to dots in saved column names. Inductive Phase 1 uses free-text fields
+   and thus does not require codebooks.
+7. Click **Start Coding**. The coded CSV and its JSON settings sidecar are
+   saved automatically in the same folder as the selected data file.
+   If the filename is already taken, the app proposes a numbered name
+   (`_1`, `_2`, etc.) and asks for confirmation before creating the new session.
+
+At least one display column must be selected. Coding-entry columns are
+always included in the table and are not affected by this selection.
 
 Both the coder and participant ID are required. Leading and trailing
-spaces are ignored. Because these values are used in folder and file
-names, they cannot contain `< > : " / \ | ? *`.
+spaces are ignored. Because these values are used in file names, they
+cannot contain `< > : " / \ | ? *`.
 
 Use **Change coding activity** above the coding table to return to the
 start screen. This reloads the app, so the activity, coder, participant,
-and project folder can be selected again.
+and input files can be selected again.
 
-## Prepare the project folder
+## Prepare the input files
 
-Every activity reads
-`20250819_Swinging_Moods_ESM_data_anonymized.xlsx` from the root of the
-selected project folder. The data must contain a `Participant_ID`
-column. The app orders the selected data by `Participant_ID` and `Obs`
-and reports an error if the entered participant ID is not present.
+Input files may be stored in any folders and may have any names. CSV
+(`.csv`) and Excel (`.xls` or `.xlsx`) files are supported. The app
+reports missing required columns before starting the coding table.
 
-All activities require the columns `Participant_ID`, `Day`, `Obs`,
-`Time1`, `Thought`, `Activity`, `Location`, and `Company`. Deductive
-coding additionally requires `Thought_ENG`, `Activity_ENG`,
-`Location_ENG`, and `Company_ENG`; both inductive phases require
-`Event`.
+The selected data file must contain a participant ID column. If it is
+named `Participant_ID`, the app selects it by default; otherwise, the
+first data column is selected initially and can be changed. The app
+orders the selected data by the chosen participant ID column and `Obs`.
 
-The selected activity determines which additional files are required:
+All activities require a selected participant ID column plus `Day`,
+`Obs`, and `Time1`. Coding variables do not require matching input columns
+or translations; choose the data to show using **Display columns**.
 
-- **Deductive coding** reads these files from `Codebooks/`:
-  `Thoughts_Delespaul1995.csv`, `Activities_ATUS2024.csv`,
-  `Locations_Stadel2024.csv`, and
-  `SocialContext_Delespaul1995.csv`.
+The selected activity determines which codebooks are required:
+
+- **Deductive coding** requires one codebook file per manually added
+  coding variable.
 - **Inductive coding: Phase 1** does not load a codebook.
-- **Inductive coding: Phase 2** reads
-  `Inductive coding/Codebook_ShinyApp_02042026.xlsx`.
+- **Inductive coding: Phase 2** requires one codebook file per manually
+  added coding variable, just like deductive coding.
 
-Codebooks must contain a column named `Code`. The deductive thought and
-activity codebooks must also contain a `Level` column; those levels are
-displayed in different colors.
+Codebooks must contain a column named `Code`. For all codebooks,
+`Level` is optional. Levels are displayed in different colors when supplied.
 
-For example, the selected project folder should have this structure:
+### Create a codebook for a variable
 
-``` text
-project folder/
-├── 20250819_Swinging_Moods_ESM_data_anonymized.xlsx
-├── Codebooks/
-│   ├── Thoughts_Delespaul1995.csv
-│   ├── Activities_ATUS2024.csv
-│   ├── Locations_Stadel2024.csv
-│   └── SocialContext_Delespaul1995.csv
-└── Inductive coding/
-    └── Codebook_ShinyApp_02042026.xlsx
+Create a spreadsheet with a column headed exactly `Code` and enter one
+selectable code per row. For example, a codebook for a variable
+named **Emotion** could contain:
+
+```csv
+Code
+Happiness
+Sadness
+Anger
 ```
 
-Only the files needed for the selected coding activity have to be
-present.
+If your codes have a hierarchy, add an optional column headed exactly
+`Level`, using `1`, `2`, or `3` to give each level a distinct display
+color. For example:
+
+```csv
+Code,Level
+Positive emotion,1
+Happiness,2
+Excitement,2
+Negative emotion,1
+Sadness,2
+```
+
+Save the codebook as a comma-separated CSV (`.csv`) or an Excel file
+(`.xls` or `.xlsx`). For Excel, put the codebook on the first worksheet,
+with the column headers in the first row. On the app's start screen,
+choose **Deductive coding** or **Inductive coding: Phase 2**, enter
+**Emotion** under **Coding variable name**, and click **Add variable**.
+Then select your file in the
+**Emotion codebook** picker. Create and supply a separate codebook for
+each variable you add.
 
 ## Coder and participant result files
 
-The app creates one CSV result file per coder and participant. If that
-file already exists, it is loaded so coding can continue where it
-stopped. Otherwise, the app creates it with empty (`NA`) coding values.
-
-The result path depends on the selected activity:
+The app creates one CSV result file per coder and participant in the
+same folder as the selected data file. Its name combines the input
+file's name (without its extension), the participant ID, and the coder:
 
 ``` text
-Deductive coding:          <project>/<coder>/Act_<participant>.csv
-Inductive coding: Phase 1: <project>/Inductive coding/Phase 1/<coder>/Act_<participant>.csv
-Inductive coding: Phase 2: <project>/Inductive coding/Phase 2/<coder>/Act_<participant>.csv
+<original_name>_<participant_id>_<coder>.csv
 ```
+
+Each result file contains the selected participant's complete input
+data followed by the coding columns. New sessions start with empty (`NA`)
+coding values. An existing result is never loaded automatically or
+overwritten when starting a new session. If either the CSV or its JSON
+sidecar already exists, the app offers the first available numbered name,
+such as `<original_name>_<participant_id>_<coder>_1.csv`, for confirmation.
+
+Deductive and inductive Phase 2 results include a `Code_<variable name>`
+column for each selected variable. Deductive coding also includes general
+and depth comment columns. Inductive Phase 2 keeps the beep and day
+familiarization notes and adds a `Proposed_<variable name>` field for each
+variable to record proposed new codes. Inductive Phase 1 includes the
+same familiarization notes and a free-text `Proposed_<variable name>`
+field for each variable, without codebook-based coding fields.
+
+### Continue coding or reuse settings
+
+Every session has a JSON settings file beside its CSV, with the same stem
+(for example, `observations_12_Alex.json` and `observations_12_Alex.csv`).
+Keep these two files together when moving or copying a session.
+
+Select the JSON using **Load session settings** at the top of the start
+screen. If its named output CSV exists beside it, choose between:
+
+- **Continue coding.** The output's content hash must match the JSON.
+  Select the original source data file, then click **Continue Coding**; its
+  content hash is checked too. Existing coding variables and codebooks
+  are kept. You may **add coding variables**, supplying new codebooks
+  where required. These get empty columns, while all existing codes and
+  notes remain intact. Removing or renaming existing variables, replacing
+  their codebooks, or changing other session settings requires a new session.
+  The original start time is retained, and the sidecar records any added variables.
+- **Edit settings for a new session.** The JSON fills the entire form
+  except the data file, which you select yourself. You can change settings,
+  remove variables, and add variables. Imported codebook fields show
+  `[using codes from json settings file]`; **Browse** replaces a codebook
+  with a newly selected file. Starting creates a fresh CSV and JSON pair.
+
+If no matching output CSV exists beside the JSON, the settings are loaded
+as a template. While preparing a continuation, **Use as template instead**
+switches to a new session with editable settings.
+
+Continuation is refused if either the source or output data has changed
+since the recorded hashes. Load the settings as a template to start a new
+session instead. CSV files without these JSON sidecars cannot be resumed;
+the previous automatic restart behavior and old-file compatibility have
+been removed.
+
+### What the JSON contains
+
+The sidecar records its schema and hash format, coding activity, coder,
+UTC start time, source filename and SHA-256 hash, output filename and
+SHA-256 hash, participant column and ID, display columns, and ordered coding
+variables. Each variable that uses a codebook includes the original
+codebook filename and its complete tabular content as CSV text.
+
+Hashes cover tabular content in a consistent UTF-8 CSV representation,
+including column and row order. They exclude file timestamps, spreadsheet
+formatting, and other file metadata. For Excel, the source is the first
+worksheet, matching the data the app loads. The output hash is refreshed
+on every saved coding change and when new variables are added on continuation.
+
+**No source observations, responses, or saved coding values are written
+to the JSON.** It contains only the session settings listed above (including
+the selected participant ID and column names), file hashes, and codebook
+contents. The CSV remains the only output containing participant observations
+and coded responses.
 
 ## Analyze the data
 
