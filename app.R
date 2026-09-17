@@ -40,8 +40,8 @@ launcher_content <- function() {
     ),
     shiny::tags$div(
       class = "launcher-setup",
-      shiny::tags$div(
-        class = "mode-options",
+      shiny::tags$fieldset(
+        id = "coding_activity_fields", class = "mode-options",
         shiny::radioButtons(
           "coding_mode",
           NULL,
@@ -58,11 +58,14 @@ launcher_content <- function() {
       ),
       shiny::tags$div(
         class = "launcher-fields",
-        shiny::textInput(
-          "coder",
-          "Coder (user)",
-          placeholder = "Enter your name or coder ID",
-          width = "100%"
+        shiny::tags$fieldset(
+          id = "coder_fields",
+          shiny::textInput(
+            "coder",
+            "Coder (user)",
+            placeholder = "Enter your name or coder ID",
+            width = "100%"
+          )
         ),
         file_picker_control(
           "choose_data_file",
@@ -104,6 +107,13 @@ launcher_content <- function() {
 ui <- shiny::fluidPage(
   theme = bslib::bs_theme(version = 5, bootswatch = "minty"),
   shiny::tags$head(
+    shiny::tags$script(shiny::HTML("
+      Shiny.addCustomMessageHandler('lock_session_identity', function(locked) {
+        document.querySelectorAll('#coding_activity_fields, #coder_fields').forEach(function(fieldset) {
+          fieldset.disabled = locked;
+        });
+      });
+    ")),
     shiny::tags$style(shiny::HTML("
       body {
         background: #f7faf9;
@@ -127,7 +137,8 @@ ui <- shiny::fluidPage(
         gap: 1.5rem;
         margin: 1.5rem 0;
       }
-      .launcher-setup > div {
+      .launcher-setup > div,
+      .launcher-setup > fieldset {
         min-width: 0;
       }
       .mode-options .shiny-input-container {
@@ -378,8 +389,8 @@ server <- function(input, output, session) {
       shiny::tags$p(if (is.null(resume_settings()))
         "Using settings as a template. Select a data file and edit any settings before starting a new session." else
         "Continuing the saved session. Select the original data file, then click Continue Coding. You may add coding variables; existing variables and other settings must be kept."),
-      shiny::tags$p(paste("Original data file:", imported_settings()$source$name)),
-      if (!is.null(resume_settings())) shiny::actionButton("use_settings_template", "Use as template instead")
+      if (!is.null(resume_settings()))
+        shiny::tags$p(paste("Original data file:", imported_settings()$source$name))
     )
   })
 
@@ -395,6 +406,7 @@ server <- function(input, output, session) {
     initial_display_columns(unlist(settings$display_columns, use.names = FALSE))
     shiny::updateRadioButtons(session, "coding_mode", selected = settings$activity)
     shiny::updateTextInput(session, "coder", value = settings$coder)
+    session$sendCustomMessage("lock_session_identity", resume)
     for (id in names(custom_variables())) {
       shiny::removeUI(selector = paste0("#", id, "_variable_row"))
       shiny::removeUI(selector = paste0("#", id, "_row"))
@@ -421,7 +433,7 @@ server <- function(input, output, session) {
           shiny::tags$p(paste("The loaded JSON file corresponds to the following coded data file from a previous coding session:", settings$output$name)),
           shiny::tags$p("You now have two options:"),
           shiny::tags$p("1. You can import the settings from that session and use them for a new coding session. Before starting the session you can edit any of the previous settings as needed."),
-          shiny::tags$p("2. You can continue coding where you left off in the previous session. In this case you will be able to add new coding variables, but you won't be able to change any settings as this could lead to conflicts in the output."),
+          shiny::tags$p("2. You can continue coding where you left off in the previous session. In this case you will be able to add new coding variables, but you won't be able to change any other settings as this could lead to conflicts in the output."),
           footer = shiny::tagList(
             shiny::actionButton("use_settings_template", "Import and edit settings for new session"),
             shiny::actionButton("continue_settings_session", "Continue previous session")
@@ -543,7 +555,7 @@ server <- function(input, output, session) {
       ),
       shiny::tags$p(
         class = "display-columns-help",
-        "These data columns will appear in the coding table."
+        "The output file will always contains all columns from the input dataset."
       )
     )
   })

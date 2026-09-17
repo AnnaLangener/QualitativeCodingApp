@@ -185,8 +185,7 @@ screen. If its named output CSV exists beside it, choose between:
   with a newly selected file. Starting creates a fresh CSV and JSON pair.
 
 If no matching output CSV exists beside the JSON, the settings are loaded
-as a template. While preparing a continuation, **Use as template instead**
-switches to a new session with editable settings.
+as a template.
 
 Continuation is refused if either the source or output data has changed
 since the recorded hashes. Load the settings as a template to start a new
