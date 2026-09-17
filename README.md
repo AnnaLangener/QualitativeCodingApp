@@ -138,20 +138,23 @@ each variable you add.
 
 ## Coder and participant result files
 
-The app creates one CSV result file per coder and participant in the
+The app creates one CSV result file per activity, coder, and participant in the
 same folder as the selected data file. Its name combines the input
-file's name (without its extension), the participant ID, and the coder:
+file's name (without its extension), the activity code, the coder, and the participant ID:
 
 ``` text
-<original_name>_<participant_id>_<coder>.csv
+<original_name>_<activity>_<coder>_<participant_id>.csv
 ```
+
+Activity codes are `DC` for Deductive coding, `ICP1` for Inductive coding:
+Phase 1, and `ICP2` for Inductive coding: Phase 2.
 
 Each result file contains the selected participant's complete input
 data followed by the coding columns. New sessions start with empty (`NA`)
 coding values. An existing result is never loaded automatically or
 overwritten when starting a new session. If either the CSV or its JSON
 sidecar already exists, the app offers the first available numbered name,
-such as `<original_name>_<participant_id>_<coder>_1.csv`, for confirmation.
+such as `<original_name>_<activity>_<coder>_<participant_id>_1.csv`, for confirmation.
 
 Deductive and inductive Phase 2 results include a `Code_<variable name>`
 column for each selected variable. Deductive coding also includes general
@@ -164,7 +167,7 @@ field for each variable, without codebook-based coding fields.
 ### Continue coding or reuse settings
 
 Every session has a JSON settings file beside its CSV, with the same stem
-(for example, `observations_12_Alex.json` and `observations_12_Alex.csv`).
+(for example, `observations_DC_Alex_12.json` and `observations_DC_Alex_12.csv`).
 Keep these two files together when moving or copying a session.
 
 Select the JSON using **Load session settings** at the top of the start

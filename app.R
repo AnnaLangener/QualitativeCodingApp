@@ -713,7 +713,7 @@ server <- function(input, output, session) {
       launch_session(arguments)
       return()
     }
-    path <- coding_output_path(files$data, coder, participant_id)
+    path <- coding_output_path(files$data, coder, participant_id, input$coding_mode)
     if (output_path_taken(path)) {
       arguments$coding_path <- next_output_path(path)
       pending_start(arguments)

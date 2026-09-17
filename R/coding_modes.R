@@ -285,7 +285,7 @@ create_coding_mode <- function(
   display_columns = default_display_columns(mode, participant_id_column),
   participant_id_column = "Participant_ID",
   coding_variables = character(),
-  coding_path = coding_output_path(data_file, user, participant_id),
+  coding_path = coding_output_path(data_file, user, participant_id, mode),
   resume_settings = NULL
 ) {
   mode_factory <- switch(

@@ -43,11 +43,18 @@ sidecar_path <- function(coding_path) {
   paste0(tools::file_path_sans_ext(coding_path), ".json")
 }
 
-coding_output_path <- function(data_file, coder, participant_id) {
+coding_output_path <- function(data_file, coder, participant_id, mode) {
+  activity <- switch(mode,
+    deductive = "DC",
+    inductive_phase1 = "ICP1",
+    inductive_phase2 = "ICP2",
+    stop("Unknown coding activity: ", mode)
+  )
   file.path(dirname(data_file), paste0(
     tools::file_path_sans_ext(basename(data_file)), "_",
-    validate_storage_identifier(participant_id, "Participant ID"), "_",
-    validate_storage_identifier(coder, "Coder"), ".csv"
+    activity, "_",
+    validate_storage_identifier(coder, "Coder"), "_",
+    validate_storage_identifier(participant_id, "Participant ID"), ".csv"
   ))
 }
 
