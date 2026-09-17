@@ -5,10 +5,15 @@
 
 
 Here we provide a shiny app that can be used by other researchers to
-code qualitative ESM data based on a given coding scheme. It contains
-several columns showing the raw observation (see screenshots below
-“activity_open”) and the given code (“Code”). To accommodate information from different coding dimensions (e.g., company mentioned alongside activities), our app includes two additional columns for capturing such information. The first column, “Additional Information,” is intended for details about participants' feelings and the social context during activities. The second column, “Other/Comments,” can be used for any other relevant information or observations. Our codes have a
-hierarchical structure and are therefore displayed in different colors.
+code qualitative ESM data using deductive or inductive coding. The app
+shows selected columns from the raw data alongside coding fields for
+each variable you add. Depending on the coding activity, these are
+`Code_<variable name>` fields for selecting existing codes and/or
+`Proposed_<variable name>` fields for proposing new codes. Deductive
+coding includes general and depth comment fields, while inductive
+coding includes beep and day familiarization notes. Codebooks can
+optionally include hierarchical levels, which are displayed in different
+colors. The screenshots below illustrate an earlier version of the app.
 
 This app was build as part of the project “Assessing Daily Life
 Activities: Comparing Predefined Categories with the Qualitative
@@ -17,25 +22,42 @@ Analysis of Open-Ended Responses in Experience Sampling Methodology
 
 ![](Images/Example_app1.jpg)
 
-To facilitate the coding process, a list of codes appears when clicking on the “Code” field, and matching codes are suggested interactively while typing.
+To facilitate the coding process, a list of codes appears when clicking
+on a `Code_<variable name>` field, and matching codes are suggested
+interactively while typing. You can select more than one code for each
+variable and observation.
 
 <img src="Images/Example_app2.png" width="326" />
 
-To use this app, download the repository and open `app.R` in RStudio
-(<https://posit.co/download/rstudio-desktop/>). On its start screen, the
+To use this app, install R and RStudio
+(<https://posit.co/download/rstudio-desktop/>), download the repository,
+and open `QualitativeCodingApp.Rproj` in RStudio. 
+
+The project uses `renv` to manage its R packages. Before you can run the app for the first time, you first need to install it and install the dependencies recorded in `renv.lock`.
+
+Install `renv` by running
+
+```r
+install.packages("renv")
+```
+
+Then restore the dependencies by running
+
+```r
+renv::restore()
+```
+
+Once the packages are installed, open the file `app.R`. On its start screen, the
 consolidated app lets you select the data and mode-specific codebook
 files for each coding session.
 
-The app runs locally, so there are no privacy concerns when using it.
+The app runs locally, so no data is shared with third parties.
 
 ## Start a coding session
 
-All three coding activities are available from one start screen. Open
-`app.R` in RStudio, click **Run App**, and make the following
-selections:
+All three coding activities are available from one start screen. Open `app.R` in RStudio, click **Run App**, and make the following selections:
 
-Optionally, use **Load session settings** at the very top to select a JSON
-sidecar from an earlier session. See [Continue coding or reuse settings](#continue-coding-or-reuse-settings).
+Optionally, use **Load session settings** at the very top to select a JSON settings file from an earlier session. See [Continue coding or reuse settings](#continue-coding-or-reuse-settings).
 
 1. **Coding activity.** Choose **Deductive coding**, **Inductive
    coding: Phase 1**, or **Inductive coding: Phase 2**. This determines
@@ -59,7 +81,7 @@ sidecar from an earlier session. See [Continue coding or reuse settings](#contin
    Variable names must be unique; spaces and punctuation are converted
    to dots in saved column names. Inductive Phase 1 uses free-text fields
    and thus does not require codebooks.
-7. Click **Start Coding**. The coded CSV and its JSON settings sidecar are
+7. Click **Start Coding**. The coded CSV and its JSON settings file are
    saved automatically in the same folder as the selected data file.
    If the filename is already taken, the app proposes a numbered name
    (`_1`, `_2`, etc.) and asks for confirmation before creating the new session.
@@ -153,7 +175,7 @@ Each result file contains the selected participant's complete input
 data followed by the coding columns. New sessions start with empty (`NA`)
 coding values. An existing result is never loaded automatically or
 overwritten when starting a new session. If either the CSV or its JSON
-sidecar already exists, the app offers the first available numbered name,
+settings file already exists, the app offers the first available numbered name,
 such as `<original_name>_<activity>_<coder>_<participant_id>_1.csv`, for confirmation.
 
 Deductive and inductive Phase 2 results include a `Code_<variable name>`
@@ -163,6 +185,10 @@ familiarization notes and adds a `Proposed_<variable name>` field for each
 variable to record proposed new codes. Inductive Phase 1 includes the
 same familiarization notes and a free-text `Proposed_<variable name>`
 field for each variable, without codebook-based coding fields.
+
+When multiple codes are selected for one variable and observation, they
+are saved in a single CSV cell separated by ` ; ` (a semicolon with a
+space on each side), for example `Happiness ; Excitement`.
 
 ### Continue coding or reuse settings
 
@@ -180,7 +206,7 @@ screen. If its named output CSV exists beside it, choose between:
   where required. These get empty columns, while all existing codes and
   notes remain intact. Removing or renaming existing variables, replacing
   their codebooks, or changing other session settings requires a new session.
-  The original start time is retained, and the sidecar records any added variables.
+  The original start time is retained, and the JSON settings file records any added variables.
 - **Edit settings for a new session.** The JSON fills the entire form
   except the data file, which you select yourself. You can change settings,
   remove variables, and add variables. Imported codebook fields show
@@ -192,13 +218,13 @@ as a template.
 
 Continuation is refused if either the source or output data has changed
 since the recorded hashes. Load the settings as a template to start a new
-session instead. CSV files without these JSON sidecars cannot be resumed;
+session instead. CSV files without these JSON settings files cannot be resumed;
 the previous automatic restart behavior and old-file compatibility have
 been removed.
 
 ### What the JSON contains
 
-The sidecar records its schema and hash format, coding activity, coder,
+The JSON settings file records its schema and hash format, coding activity, coder,
 UTC start time, source filename and SHA-256 hash, output filename and
 SHA-256 hash, participant column and ID, display columns, and ordered coding
 variables. Each variable that uses a codebook includes the original
@@ -210,20 +236,9 @@ formatting, and other file metadata. For Excel, the source is the first
 worksheet, matching the data the app loads. The output hash is refreshed
 on every saved coding change and when new variables are added on continuation.
 
-**No source observations, responses, or saved coding values are written
-to the JSON.** It contains only the session settings listed above (including
-the selected participant ID and column names), file hashes, and codebook
-contents. The CSV remains the only output containing participant observations
+No source observations, responses, or saved coding values are written
+to the JSON. The CSV remains the only output containing participant observations
 and coded responses.
-
-## Analyze the data
-
-This repository also contains some simple R code to start analyzing the
-data:
-[Results_Analysis.Rmd](https://github.com/AnnaLangener/QualitativeCodingApp/blob/Anna_Tests/Results_Analysis.Rmd "Results_Analysis.Rmd").
-For example, we provide some code to read the results from each
-participant and calculate the frequency of how often a particular code
-was used.
 
 ## Questions/Problems?
 
