@@ -418,11 +418,13 @@ server <- function(input, output, session) {
       if (file.exists(saved_path)) {
         shiny::showModal(shiny::modalDialog(
           title = "Existing coding session found",
-          shiny::tags$p(paste("Found", settings$output$name)),
-          shiny::tags$p("Continue coding with the saved values, or edit the settings to start a new session?"),
+          shiny::tags$p(paste("The loaded JSON file corresponds to the following coded data file from a previous coding session:", settings$output$name)),
+          shiny::tags$p("You now have two options:"),
+          shiny::tags$p("1. You can import the settings from that session and use them for a new coding session. Before starting the session you can edit any of the previous settings as needed."),
+          shiny::tags$p("2. You can continue coding where you left off in the previous session. In this case you will be able to add new coding variables, but you won't be able to change any settings as this could lead to conflicts in the output."),
           footer = shiny::tagList(
-            shiny::actionButton("use_settings_template", "Edit settings for a new session"),
-            shiny::actionButton("continue_settings_session", "Continue coding")
+            shiny::actionButton("use_settings_template", "Import and edit settings for new session"),
+            shiny::actionButton("continue_settings_session", "Continue previous session")
           )
         ))
       }
