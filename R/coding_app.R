@@ -6,29 +6,150 @@ required_packages <- c(
   "DT",
   "stringr",
   "bslib",
-  "shinycssloaders"
+  "shinycssloaders",
+  "jsonlite",
+  "digest"
 )
 
 invisible(lapply(required_packages, library, character.only = TRUE))
 
 
-choose_project_directory <- function() {
-  project_directory <- tcltk::tk_choose.dir(
-    default = "",
-    caption = "Select directory"
+choose_tabular_file <- function(caption, json = FALSE) {
+  filters <- matrix(
+    c(
+      "CSV and Excel files", "*.csv;*.xls;*.xlsx",
+      "All files", "*.*"
+    ),
+    ncol = 2,
+    byrow = TRUE
   )
-  if (is.na(project_directory) || !nzchar(project_directory)) {
-    stop("No project directory was selected.")
+  if (json) filters <- matrix(c("JSON settings files", "*.json", "All files", "*.*"),
+                             ncol = 2, byrow = TRUE)
+
+  data_path <- if (.Platform$OS.type == "windows") {
+    utils::choose.files(
+      caption = caption,
+      multi = FALSE,
+      filters = filters,
+      index = 1
+    )
+  } else {
+    tcltk::tk_choose.files(
+      caption = caption,
+      multi = FALSE,
+      filters = filters,
+      index = 1
+    )
+  }
+  if (
+    length(data_path) != 1 ||
+      is.na(data_path) ||
+      !nzchar(data_path)
+  ) {
+    return(NULL)
   }
 
-  normalizePath(project_directory, winslash = "/", mustWork = TRUE)
+  normalizePath(data_path, winslash = "/", mustWork = TRUE)
 }
 
 
-load_coding_data <- function(project_directory, data_path, columns) {
-  readxl::read_excel(file.path(project_directory, data_path)) |>
-    dplyr::select(dplyr::all_of(columns)) |>
-    dplyr::arrange(Participant_ID, Obs)
+read_tabular_file <- function(upload, label) {
+  if (is.character(upload)) {
+    name <- basename(upload)
+    path <- upload
+  } else {
+    name <- upload$name[[1]]
+    path <- upload$datapath[[1]]
+  }
+  extension <- tolower(tools::file_ext(name))
+
+  switch(
+    extension,
+    csv = utils::read.csv(path, check.names = FALSE),
+    xls = readxl::read_excel(path),
+    xlsx = readxl::read_excel(path),
+    stop(
+      label,
+      " must be a CSV or Excel file (.csv, .xls, or .xlsx)."
+    )
+  )
+}
+
+
+read_tabular_column_names <- function(upload, label) {
+  if (is.character(upload)) {
+    name <- basename(upload)
+    path <- upload
+  } else {
+    name <- upload$name[[1]]
+    path <- upload$datapath[[1]]
+  }
+  extension <- tolower(tools::file_ext(name))
+
+  columns <- switch(
+    extension,
+    csv = colnames(utils::read.csv(
+      path,
+      nrows = 0,
+      check.names = FALSE
+    )),
+    xls = colnames(readxl::read_excel(path, n_max = 0)),
+    xlsx = colnames(readxl::read_excel(path, n_max = 0)),
+    stop(
+      label,
+      " must be a CSV or Excel file (.csv, .xls, or .xlsx)."
+    )
+  )
+
+  if (length(columns) == 0) {
+    stop(label, " does not contain any columns.")
+  }
+  if (anyDuplicated(columns)) {
+    stop(label, " must have unique column names.")
+  }
+
+  columns
+}
+
+
+require_columns <- function(data, columns, label) {
+  missing_columns <- setdiff(columns, colnames(data))
+  if (length(missing_columns) > 0) {
+    stop(
+      label,
+      " is missing required columns: ",
+      paste(missing_columns, collapse = ", "),
+      "."
+    )
+  }
+
+  data
+}
+
+
+load_coding_data <- function(
+  data_file,
+  columns,
+  participant_id_column = "Participant_ID"
+) {
+  read_tabular_file(data_file, "The data file") |>
+    require_columns(columns, "The data file") |>
+    dplyr::arrange(
+      .data[[participant_id_column]],
+      .data[["Obs"]]
+    )
+}
+
+
+load_codebook <- function(codebook_file, label, has_levels = FALSE) {
+  required_columns <- if (has_levels) c("Code", "Level") else "Code"
+  book <- if (is.list(codebook_file) && !is.null(codebook_file$content_csv)) {
+    csv_table(text = codebook_file$content_csv)
+  } else {
+    read_tabular_file(codebook_file, label)
+  }
+  book |>
+    require_columns(required_columns, label)
 }
 
 
@@ -44,11 +165,21 @@ select_participant_data <- function(data, id_column, participant_id) {
     stop(
       "Participant ID '",
       participant_id,
-      "' was not found in the selected project's data."
+      "' was not found in the selected data file."
     )
   }
 
   participant_data
+}
+
+
+participant_id_choices <- function(data, id_column) {
+  if (is.null(id_column) || !id_column %in% colnames(data)) {
+    return(character())
+  }
+
+  values <- trimws(as.character(data[[id_column]]))
+  unique(values[!is.na(values) & nzchar(values)])
 }
 
 
@@ -99,11 +230,8 @@ coding_selectize_field <- function(column, id, storage_column, choices) {
 }
 
 
-familiarization_fields <- function(
-  proposed_event_id,
-  existing_code_choices = NULL
-) {
-  fields <- list(
+familiarization_note_fields <- function() {
+  list(
     coding_text_field(
       "Familiarization note: beep",
       "general",
@@ -115,30 +243,23 @@ familiarization_fields <- function(
       "depth",
       2,
       "Day level"
-    ),
-    coding_text_field(
-      "Proposed event code",
-      proposed_event_id,
-      3,
-      "Proposed event code"
     )
   )
+}
 
-  if (!is.null(existing_code_choices)) {
-    fields <- append(
-      fields,
-      list(
-        coding_selectize_field(
-          "Existing event code",
-          "event_existing",
-          4,
-          existing_code_choices
-        )
-      )
+
+proposed_coding_variable_fields <- function(
+  coding_variables,
+  storage_offset = 0L
+) {
+  lapply(seq_along(coding_variables), function(index) {
+    coding_text_field(
+      paste0("Proposed_", coding_variables[[index]]),
+      paste0("proposed_variable_", index, "_"),
+      storage_offset + index,
+      paste("Proposed code for", coding_variables[[index]])
     )
-  }
-
-  fields
+  })
 }
 
 
@@ -147,9 +268,12 @@ field_columns <- function(fields) {
 }
 
 
-familiarization_column_order <- function(fields) {
+familiarization_column_order <- function(
+  fields,
+  participant_id_column = "Participant_ID"
+) {
   c(
-    "Participant_ID", "Day", "Obs", "Time1",
+    participant_id_column, "Day", "Obs", "Time1",
     "Thought", "Activity", "Location", "Company", "Event",
     field_columns(fields)
   )
@@ -157,44 +281,42 @@ familiarization_column_order <- function(fields) {
 
 
 initialize_coding_storage <- function(
-  project_directory,
-  storage_directory,
-  user,
-  participant_id,
   participant_data,
-  storage_columns
+  storage_columns,
+  storage
 ) {
-  user <- validate_storage_identifier(user, "Coder")
-  participant_id <- validate_storage_identifier(
-    participant_id,
-    "Participant ID"
-  )
-
-  user_directory <- if (is.null(storage_directory)) {
-    file.path(project_directory, user)
-  } else {
-    file.path(project_directory, storage_directory, user)
+  coding_path <- storage$path
+  storage_names <- make.names(storage_columns)
+  if (anyDuplicated(storage_names) ||
+      any(storage_names %in% names(participant_data)) ||
+      any(storage_columns %in% names(participant_data))) {
+    stop("Coding column names must be unique and must not overlap with input data columns.")
   }
-
-  if (!file.exists(user_directory)) {
-    dir.create(user_directory, recursive = TRUE)
-  }
-
-  coding_path <- file.path(
-    user_directory,
-    paste0("Act_", participant_id, ".csv")
-  )
-
-  if (!file.exists(coding_path)) {
-    empty_data <- as.data.frame(
+  if (!storage$resume) {
+    if (output_path_taken(coding_path)) stop("The output filename is already in use. Start again to confirm a new filename.")
+    coding_data <- as.data.frame(
       matrix(
         NA,
         nrow = nrow(participant_data),
         ncol = length(storage_columns)
       )
     )
-    names(empty_data) <- make.names(storage_columns, unique = TRUE)
-    utils::write.csv(empty_data, coding_path)
+    names(coding_data) <- storage_names
+
+    merged_data <- cbind(participant_data, coding_data)
+    write_session_output(merged_data, coding_path, storage$settings)
+  } else {
+    merged_data <- csv_table(coding_path)
+    previous_names <- storage$previous_columns
+    if (!identical(names(merged_data), c(names(participant_data), previous_names)) ||
+        nrow(merged_data) != nrow(participant_data) ||
+        !identical(content_hash(merged_data[, names(participant_data), drop = FALSE]),
+                   content_hash(participant_data))) {
+      stop("Continuation is not permitted: the output rows or columns do not match this session.")
+    }
+    for (column in setdiff(storage_names, names(merged_data))) merged_data[[column]] <- NA_character_
+    merged_data <- merged_data[, c(names(participant_data), storage_names), drop = FALSE]
+    write_session_output(merged_data, coding_path, storage$settings)
   }
 
   coding_path
@@ -374,6 +496,10 @@ render_coding_widget <- function(output, row, saved_data, field) {
   input_id <- paste0(field$input_prefix, row)
   output_id <- paste0(field$output_prefix, row)
   selected <- saved_values(saved_data[row, field$storage_column])
+  if (field$type == "text") {
+    selected <- saved_data[row, field$storage_column]
+    if (is.na(selected)) selected <- ""
+  }
 
   widget <- if (field$type == "selectize") {
     shiny::selectizeInput(
@@ -406,18 +532,42 @@ render_coding_widgets <- function(output, participant_data, saved_data, fields) 
 }
 
 
-register_save_observer <- function(input, row, coding_path, field) {
+read_saved_coding_data <- function(
+  coding_path,
+  storage_columns
+) {
+  saved_data <- csv_table(coding_path)
+  saved_data[, make.names(storage_columns), drop = FALSE]
+}
+
+
+register_save_observer <- function(
+  input,
+  row,
+  coding_path,
+  field
+) {
   input_id <- paste0(field$input_prefix, row)
-  storage_column <- field$storage_column
+  storage_column <- make.names(field$column)
 
   shiny::observeEvent(input[[input_id]], {
-    saved_data <- utils::read.csv(coding_path)[, -1, drop = FALSE]
-    saved_data[row, storage_column] <- paste(
-      input[[input_id]],
-      collapse = " ; "
-    )
-    utils::write.csv(saved_data, coding_path, row.names = TRUE)
-  })
+    if (!input_id %in% names(input)) return()
+    tryCatch({
+      settings <- read_session_settings(sidecar_path(coding_path))
+      if (!identical(output_hash(coding_path), settings$output$sha256)) {
+        stop("The output file was changed outside this session.")
+      }
+      saved_data <- csv_table(coding_path)
+      value <- paste(input[[input_id]], collapse = " ; ")
+      if (identical(saved_data[row, storage_column], value) ||
+          (is.na(saved_data[row, storage_column]) && !nzchar(value))) return()
+      saved_data[row, storage_column] <- value
+      write_session_output(saved_data, coding_path, settings)
+    }, error = function(error) {
+      shiny::showNotification(paste("Saving stopped:", conditionMessage(error)),
+                              type = "error", duration = NULL)
+    })
+  }, ignoreNULL = FALSE)
 }
 
 
@@ -429,7 +579,12 @@ register_save_observers <- function(
 ) {
   for (field in fields) {
     for (row in seq_len(nrow(participant_data))) {
-      register_save_observer(input, row, coding_path, field)
+      register_save_observer(
+        input,
+        row,
+        coding_path,
+        field
+      )
     }
   }
 }
@@ -453,9 +608,10 @@ coding_server <- function(
     })
 
     shiny::observeEvent(input$Act_participant_rows_current, {
-      saved_data <- utils::read.csv(coding_path)[-1]
-      print("Act dataframe reloaded")
-      print(utils::head(saved_data))
+      saved_data <- read_saved_coding_data(
+        coding_path,
+        field_columns(fields)
+      )
 
       render_coding_widgets(
         output,
