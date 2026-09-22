@@ -163,7 +163,7 @@ each concept you add.
 
 ## Files created as the output
 
-The app creates one CSV result file per activity, coder, and participant.
+The app creates one CSV result file per per coding session in the same folder as the selected data file.
 
 The output file name combines the input file's name, the activity code, the coder, and the participant ID:
 
@@ -177,8 +177,7 @@ Activity codes are:
 - `ICP1` – Inductive coding: Phase 1
 - `ICP2` – Inductive coding: Phase 2
 
-Every session has a JSON settings file that is stored in the same folder as the results CSV. The settings JSON has the the same stem (for example, `observations_DC_Alex_12.json` and `observations_DC_Alex_12.csv`).
-Keep these two files together when moving or copying a session.
+Every session also creates a JSON settings file that is stored in the same folder as the results CSV. The settings JSON has the the same stem (for example, `observations_DC_Alex_12.json` and `observations_DC_Alex_12.csv`). The JSON settings files contain metadata of the coding session and can be used to reuse the settings of the respective session. Keep these two files together when moving or copying the data associated with a session.
 
 > [!NOTE]
 > Both the CSV result file and the JSON settings file are stored in the same location as the selected data file.
