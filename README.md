@@ -161,7 +161,7 @@ Then select your file in the
 **Emotion codebook** picker. Create and supply a separate codebook for
 each concept you add.
 
-## Coder and participant result files
+## Files created as the output
 
 The app creates one CSV result file per activity, coder, and participant.
 
