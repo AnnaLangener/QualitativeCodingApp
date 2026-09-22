@@ -29,6 +29,8 @@ concept and observation.
 
 <img src="Images/Example_app2.png" width="326" />
 
+## Setup
+
 To use this app, install R and RStudio
 (<https://posit.co/download/rstudio-desktop/>), download the repository,
 and open `QualitativeCodingApp.Rproj` in RStudio. 
@@ -161,16 +163,25 @@ each concept you add.
 
 ## Coder and participant result files
 
-The app creates one CSV result file per activity, coder, and participant in the
-same folder as the selected data file. Its name combines the input
-file's name (without its extension), the activity code, the coder, and the participant ID:
+The app creates one CSV result file per activity, coder, and participant.
+
+The output file name combines the input file's name, the activity code, the coder, and the participant ID:
 
 ``` text
 <original_name>_<activity>_<coder>_<participant_id>.csv
 ```
 
-Activity codes are `DC` for Deductive coding, `ICP1` for Inductive coding:
-Phase 1, and `ICP2` for Inductive coding: Phase 2.
+Activity codes are:
+
+- `DC` – Deductive coding
+- `ICP1` – Inductive coding: Phase 1
+- `ICP2` – Inductive coding: Phase 2
+
+Every session has a JSON settings file that is stored in the same folder as the results CSV. The settings JSON has the the same stem (for example, `observations_DC_Alex_12.json` and `observations_DC_Alex_12.csv`).
+Keep these two files together when moving or copying a session.
+
+> [!NOTE]
+> Both the CSV result file and the JSON settings file are stored in the same location as the selected data file.
 
 Each result file contains the selected participant's complete input
 data followed by the coding columns. New sessions start with empty (`NA`)
@@ -192,10 +203,6 @@ are saved in a single CSV cell separated by ` ; ` (a semicolon with a
 space on each side), for example `Happiness ; Excitement`.
 
 ### Continue coding or reuse settings
-
-Every session has a JSON settings file beside its CSV, with the same stem
-(for example, `observations_DC_Alex_12.json` and `observations_DC_Alex_12.csv`).
-Keep these two files together when moving or copying a session.
 
 Select the JSON using **Load session settings** at the top of the start
 screen. If its named output CSV exists beside it, choose between:
