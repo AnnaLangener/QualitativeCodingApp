@@ -7,9 +7,9 @@
 Here we provide a shiny app that can be used by other researchers to
 code qualitative ESM data using deductive or inductive coding. The app
 shows selected columns from the raw data alongside coding fields for
-each variable you add. Depending on the coding activity, these are
-`Code_<variable name>` fields for selecting existing codes and/or
-`Proposed_<variable name>` fields for proposing new codes. Deductive
+each concept you add. Depending on the coding activity, these are
+`Code_<concept name>` fields for selecting existing codes and/or
+`Proposed_<concept name>` fields for proposing new codes. Deductive
 coding includes general and depth comment fields, while inductive
 coding includes beep and day familiarization notes. Codebooks can
 optionally include hierarchical levels, which are displayed in different
@@ -23,9 +23,9 @@ Analysis of Open-Ended Responses in Experience Sampling Methodology
 ![](Images/Example_app1.jpg)
 
 To facilitate the coding process, a list of codes appears when clicking
-on a `Code_<variable name>` field, and matching codes are suggested
+on a `Code_<concept name>` field, and matching codes are suggested
 interactively while typing. You can select more than one code for each
-variable and observation.
+concept and observation.
 
 <img src="Images/Example_app2.png" width="326" />
 
@@ -72,13 +72,13 @@ Optionally, use **Load session settings** at the very top to select a JSON setti
 5. **Display columns.** After selecting the data file, choose which of
    its columns should appear in the coding table. The columns normally
    used by the selected coding activity are selected by default.
-6. **Coding variables and codebooks.** Enter
-   a coding variable name and click **Add variable**; repeat for as
-   many variables as needed. Add at least one variable. Deductive coding
-   and inductive Phase 2 require one codebook file per variable.
-   See [Create a codebook for a variable](#create-a-codebook-for-a-variable)
+6. **Concepts to be coded and codebooks.** Enter
+   a name for a concept to be coded and click **Add concept to be coded**;
+   repeat for as many concepts as needed. Add at least one concept. Deductive coding
+   and inductive Phase 2 require one codebook file per concept.
+   See [Create a codebook for a concept](#create-a-codebook-for-a-concept)
    for the required format and examples.
-   Variable names must be unique; spaces and punctuation are converted
+   Concept names must be unique; spaces and punctuation are converted
    to dots in saved column names. Inductive Phase 1 uses free-text fields
    and thus does not require codebooks.
 7. Click **Start Coding**. The coded CSV and its JSON settings file are
@@ -109,24 +109,24 @@ first data column is selected initially and can be changed. The app
 orders the selected data by the chosen participant ID column and `Obs`.
 
 All activities require a selected participant ID column plus `Day`,
-`Obs`, and `Time1`. Coding variables do not require matching input columns
+`Obs`, and `Time1`. Concepts to be coded do not require matching input columns
 or translations; choose the data to show using **Display columns**.
 
 The selected activity determines which codebooks are required:
 
 - **Deductive coding** requires one codebook file per manually added
-  coding variable.
+  concept to be coded.
 - **Inductive coding: Phase 1** does not load a codebook.
 - **Inductive coding: Phase 2** requires one codebook file per manually
-  added coding variable, just like deductive coding.
+  added concept to be coded, just like deductive coding.
 
 Codebooks must contain a column named `Code`. For all codebooks,
 `Level` is optional. Levels are displayed in different colors when supplied.
 
-### Create a codebook for a variable
+### Create a codebook for a concept
 
 Create a spreadsheet with a column headed exactly `Code` and enter one
-selectable code per row. For example, a codebook for a variable
+selectable code per row. For example, a codebook for a concept
 named **Emotion** could contain:
 
 ```csv
@@ -153,10 +153,11 @@ Save the codebook as a comma-separated CSV (`.csv`) or an Excel file
 (`.xls` or `.xlsx`). For Excel, put the codebook on the first worksheet,
 with the column headers in the first row. On the app's start screen,
 choose **Deductive coding** or **Inductive coding: Phase 2**, enter
-**Emotion** under **Coding variable name**, and click **Add variable**.
+**Emotion** under **Name of concept to be coded**, and click
+**Add concept to be coded**.
 Then select your file in the
 **Emotion codebook** picker. Create and supply a separate codebook for
-each variable you add.
+each concept you add.
 
 ## Coder and participant result files
 
@@ -178,15 +179,15 @@ overwritten when starting a new session. If either the CSV or its JSON
 settings file already exists, the app offers the first available numbered name,
 such as `<original_name>_<activity>_<coder>_<participant_id>_1.csv`, for confirmation.
 
-Deductive and inductive Phase 2 results include a `Code_<variable name>`
-column for each selected variable. Deductive coding also includes general
+Deductive and inductive Phase 2 results include a `Code_<concept name>`
+column for each selected concept. Deductive coding also includes general
 and depth comment columns. Inductive Phase 2 keeps the beep and day
-familiarization notes and adds a `Proposed_<variable name>` field for each
-variable to record proposed new codes. Inductive Phase 1 includes the
-same familiarization notes and a free-text `Proposed_<variable name>`
-field for each variable, without codebook-based coding fields.
+familiarization notes and adds a `Proposed_<concept name>` field for each
+concept to record proposed new codes. Inductive Phase 1 includes the
+same familiarization notes and a free-text `Proposed_<concept name>`
+field for each concept, without codebook-based coding fields.
 
-When multiple codes are selected for one variable and observation, they
+When multiple codes are selected for one concept and observation, they
 are saved in a single CSV cell separated by ` ; ` (a semicolon with a
 space on each side), for example `Happiness ; Excitement`.
 
@@ -201,15 +202,15 @@ screen. If its named output CSV exists beside it, choose between:
 
 - **Continue coding.** The output's content hash must match the JSON.
   Select the original source data file, then click **Continue Coding**; its
-  content hash is checked too. Existing coding variables and codebooks
-  are kept. You may **add coding variables**, supplying new codebooks
+  content hash is checked too. Existing concepts to be coded and codebooks
+  are kept. You may **add concepts to be coded**, supplying new codebooks
   where required. These get empty columns, while all existing codes and
-  notes remain intact. Removing or renaming existing variables, replacing
+  notes remain intact. Removing or renaming existing concepts, replacing
   their codebooks, or changing other session settings requires a new session.
-  The original start time is retained, and the JSON settings file records any added variables.
+  The original start time is retained, and the JSON settings file records any added concepts.
 - **Edit settings for a new session.** The JSON fills the entire form
   except the data file, which you select yourself. You can change settings,
-  remove variables, and add variables. Imported codebook fields show
+  remove concepts, and add concepts. Imported codebook fields show
   `[using codes from json settings file]`; **Browse** replaces a codebook
   with a newly selected file. Starting creates a fresh CSV and JSON pair.
 
@@ -226,15 +227,15 @@ been removed.
 
 The JSON settings file records its schema and hash format, coding activity, coder,
 UTC start time, source filename and SHA-256 hash, output filename and
-SHA-256 hash, participant column and ID, display columns, and ordered coding
-variables. Each variable that uses a codebook includes the original
+SHA-256 hash, participant column and ID, display columns, and ordered
+concepts to be coded. Each concept that uses a codebook includes the original
 codebook filename and its complete tabular content as CSV text.
 
 Hashes cover tabular content in a consistent UTF-8 CSV representation,
 including column and row order. They exclude file timestamps, spreadsheet
 formatting, and other file metadata. For Excel, the source is the first
 worksheet, matching the data the app loads. The output hash is refreshed
-on every saved coding change and when new variables are added on continuation.
+on every saved coding change and when new concepts are added on continuation.
 
 No source observations, responses, or saved coding values are written
 to the JSON. The CSV remains the only output containing participant observations
