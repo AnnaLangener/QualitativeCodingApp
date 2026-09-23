@@ -307,16 +307,17 @@ create_coding_mode <- function(
     participant_id_column, participant_id, display_columns, coding_variables, codebooks)
   if (!is.null(resume_settings)) {
     verify_session_files(resume_settings, data_file, coding_path)
-    # Existing variables and their codebooks remain intact; new variables may be added.
+    # Keep existing concepts and codebooks; allow display changes and new concepts.
     expected <- resume_settings
     expected$source <- settings$source
     expected$output <- settings$output
     expected$started_at <- settings$started_at
+    expected$display_columns <- settings$display_columns
     previous_count <- length(expected$coding_variables)
     current <- settings
     current$coding_variables <- head(current$coding_variables, previous_count)
     if (length(settings$coding_variables) < previous_count || !identical(expected, current)) {
-      stop("Continuation keeps the original settings and concepts to be coded. You may add new concepts; use the JSON as a template to remove concepts or change other settings.")
+      stop("Continuation keeps the original settings and concepts to be coded. You may change display columns and add new concepts; use the JSON as a template to remove concepts or change other settings.")
     }
     settings$started_at <- resume_settings$started_at
     settings$source <- resume_settings$source
@@ -332,7 +333,7 @@ create_coding_mode <- function(
     participant_id_column = participant_id_column,
     coding_variables = coding_variables,
     storage = list(path = coding_path, settings = settings, resume = !is.null(resume_settings),
-                   previous_columns = previous_columns)
+                   previous_columns = previous_columns, previous_settings = resume_settings)
   )
   do.call(mode_factory, arguments)
 }

@@ -388,7 +388,7 @@ server <- function(input, output, session) {
     shiny::tagList(
       shiny::tags$p(if (is.null(resume_settings()))
         "Using settings as a template. Select a data file and edit any settings before starting a new session." else
-        "Continuing the saved session. Select the original data file, then click Continue Coding. You may add concepts to be coded; existing concepts and other settings must be kept."),
+        "Continuing the saved session. Select the original data file, then click Continue Coding. You may change display columns and add concepts to be coded; existing concepts and other settings must be kept."),
       if (!is.null(resume_settings()))
         shiny::tags$p(paste("Original data file:", imported_settings()$source$name))
     )
@@ -433,7 +433,7 @@ server <- function(input, output, session) {
           shiny::tags$p(paste("The loaded JSON file corresponds to the following coded data file from a previous coding session:", settings$output$name)),
           shiny::tags$p("You now have two options:"),
           shiny::tags$p("1. You can import the settings from that session and use them for a new coding session. Before starting the session you can edit any of the previous settings as needed."),
-          shiny::tags$p("2. You can continue coding where you left off in the previous session. In this case you will be able to add new concepts to be coded, but you won't be able to change any other settings as this could lead to conflicts in the output."),
+          shiny::tags$p("2. You can continue coding where you left off in the previous session. You may change display columns and add new concepts to be coded. Existing concepts and other settings must be kept."),
           footer = shiny::tagList(
             shiny::actionButton("use_settings_template", "Import and edit settings for new session"),
             shiny::actionButton("continue_settings_session", "Continue previous session")
@@ -555,7 +555,7 @@ server <- function(input, output, session) {
       ),
       shiny::tags$p(
         class = "display-columns-help",
-        "The output file will always contains all columns from the input dataset."
+        "The output file includes the participant ID, selected display columns, and coding fields. Source columns keep their original order. Continuing a session updates the output to match this selection."
       )
     )
   })

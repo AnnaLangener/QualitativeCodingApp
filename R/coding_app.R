@@ -292,6 +292,12 @@ initialize_coding_storage <- function(
       any(storage_columns %in% names(participant_data))) {
     stop("Coding column names must be unique and must not overlap with input data columns.")
   }
+  output_columns <- function(settings) {
+    selected <- c(settings$participant$column,
+                  unlist(settings$display_columns, use.names = FALSE))
+    names(participant_data)[names(participant_data) %in% selected]
+  }
+  output_data <- participant_data[, output_columns(storage$settings), drop = FALSE]
   if (!storage$resume) {
     if (output_path_taken(coding_path)) stop("The output filename is already in use. Start again to confirm a new filename.")
     coding_data <- as.data.frame(
@@ -303,19 +309,31 @@ initialize_coding_storage <- function(
     )
     names(coding_data) <- storage_names
 
-    merged_data <- cbind(participant_data, coding_data)
+    merged_data <- cbind(output_data, coding_data)
     write_session_output(merged_data, coding_path, storage$settings)
   } else {
     merged_data <- csv_table(coding_path)
     previous_names <- storage$previous_columns
-    if (!identical(names(merged_data), c(names(participant_data), previous_names)) ||
+    previous_source_names <- output_columns(storage$previous_settings)
+    # Earlier filtered outputs always included Time1, even when not displayed.
+    timestamp_source_names <- names(participant_data)[
+      names(participant_data) %in% c(previous_source_names, "Time1")
+    ]
+    if (identical(names(merged_data), c(timestamp_source_names, previous_names))) {
+      previous_source_names <- timestamp_source_names
+    }
+    # Sessions created before output filtering contained every source column.
+    if (identical(names(merged_data), c(names(participant_data), previous_names))) {
+      previous_source_names <- names(participant_data)
+    }
+    if (!identical(names(merged_data), c(previous_source_names, previous_names)) ||
         nrow(merged_data) != nrow(participant_data) ||
-        !identical(content_hash(merged_data[, names(participant_data), drop = FALSE]),
-                   content_hash(participant_data))) {
+        !identical(content_hash(merged_data[, previous_source_names, drop = FALSE]),
+                   content_hash(participant_data[, previous_source_names, drop = FALSE]))) {
       stop("Continuation is not permitted: the output rows or columns do not match this session.")
     }
     for (column in setdiff(storage_names, names(merged_data))) merged_data[[column]] <- NA_character_
-    merged_data <- merged_data[, c(names(participant_data), storage_names), drop = FALSE]
+    merged_data <- cbind(output_data, merged_data[, storage_names, drop = FALSE])
     write_session_output(merged_data, coding_path, storage$settings)
   }
 

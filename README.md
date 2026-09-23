@@ -182,8 +182,8 @@ Every session also creates a JSON settings file that is stored in the same folde
 > [!NOTE]
 > Both the CSV result file and the JSON settings file are stored in the same location as the selected data file.
 
-Each result file contains the selected participant's complete input
-data followed by the coding columns. New sessions start with empty (`NA`)
+Each result file contains the selected participant's ID column, the selected display columns and the coding columns.
+New sessions start with empty (`NA`)
 coding values. An existing result is never loaded automatically or
 overwritten when starting a new session. If either the CSV or its JSON
 settings file already exists, the app offers the first available numbered name,
@@ -213,7 +213,8 @@ screen. If its named output CSV exists beside it, choose between:
   where required. These get empty columns, while all existing codes and
   notes remain intact. Removing or renaming existing concepts, replacing
   their codebooks, or changing other session settings requires a new session.
-  The original start time is retained, and the JSON settings file records any added concepts.
+  The original start time is retained, and the JSON settings file records the
+  updated display selection and any added concepts.
 - **Edit settings for a new session.** The JSON fills the entire form
   except the data file, which you select yourself. You can change settings,
   remove concepts, and add concepts. Imported codebook fields show
@@ -241,7 +242,8 @@ Hashes cover tabular content in a consistent UTF-8 CSV representation,
 including column and row order. They exclude file timestamps, spreadsheet
 formatting, and other file metadata. For Excel, the source is the first
 worksheet, matching the data the app loads. The output hash is refreshed
-on every saved coding change and when new concepts are added on continuation.
+on every saved coding change and when display columns or concepts are updated
+on continuation.
 
 No source observations, responses, or saved coding values are written
 to the JSON. The CSV remains the only output containing participant observations
