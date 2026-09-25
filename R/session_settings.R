@@ -131,7 +131,7 @@ read_session_settings <- function(path) {
   validate_storage_identifier(settings$coder, "Coder")
   validate_storage_identifier(settings$participant$id, "Participant ID")
   variables <- vapply(settings$coding_variables, function(variable) {
-    if (!is.list(variable) || !scalar(variable$name)) stop("Invalid coding variable in settings file.")
+    if (!is.list(variable) || !scalar(variable$name)) stop("Invalid concept to be coded in settings file.")
     if (settings$activity != "inductive_phase1") {
       if (!is.list(variable$codebook) || !filename(variable$codebook$name) ||
           !scalar(variable$codebook$content_csv)) stop("Missing codebook in settings file.")

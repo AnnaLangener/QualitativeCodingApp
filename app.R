@@ -80,17 +80,17 @@ launcher_content <- function() {
       shiny::uiOutput("display_columns_ui"),
       shiny::tags$div(
         class = "codebook-inputs",
-        shiny::tags$h2("Coding variables"),
+        shiny::tags$h2("Concepts to be coded"),
         shiny::tags$div(id = "custom-variables"),
         shiny::textInput(
-          "new_coding_variable", "Coding variable name",
-          placeholder = "Enter a variable name, e.g. Emotion", width = "100%"
+          "new_coding_variable", "Name of concept to be coded",
+          placeholder = "Enter a concept name, e.g. Emotion", width = "100%"
         ),
-        shiny::actionButton("add_coding_variable", "Add variable"),
+        shiny::actionButton("add_coding_variable", "Add concept to be coded"),
         shiny::conditionalPanel(
           condition = "input.coding_mode == 'deductive' || input.coding_mode == 'inductive_phase2'",
           shiny::tags$h2("Codebook files"),
-          shiny::tags$p("Supply one codebook for each coding variable you add."),
+          shiny::tags$p("Supply one codebook for each concept to be coded you add."),
           shiny::tags$div(id = "custom-codebooks", class = "codebook-grid")
         )
       )
@@ -281,7 +281,7 @@ server <- function(input, output, session) {
       ui = shiny::tags$div(
         id = paste0(id, "_variable_row"), class = "custom-variable-row",
         shiny::tags$span(label),
-        if (locked) shiny::tags$small("Existing variable") else shiny::actionButton(
+        if (locked) shiny::tags$small("Existing concept") else shiny::actionButton(
           paste0("remove_", id), "Remove",
           class = "btn-sm", `aria-label` = paste("Remove", label)
         )
@@ -388,7 +388,7 @@ server <- function(input, output, session) {
     shiny::tagList(
       shiny::tags$p(if (is.null(resume_settings()))
         "Using settings as a template. Select a data file and edit any settings before starting a new session." else
-        "Continuing the saved session. Select the original data file, then click Continue Coding. You may add coding variables; existing variables and other settings must be kept."),
+        "Continuing the saved session. Select the original data file, then click Continue Coding. You may change display columns and add concepts to be coded; existing concepts and other settings must be kept."),
       if (!is.null(resume_settings()))
         shiny::tags$p(paste("Original data file:", imported_settings()$source$name))
     )
@@ -433,7 +433,7 @@ server <- function(input, output, session) {
           shiny::tags$p(paste("The loaded JSON file corresponds to the following coded data file from a previous coding session:", settings$output$name)),
           shiny::tags$p("You now have two options:"),
           shiny::tags$p("1. You can import the settings from that session and use them for a new coding session. Before starting the session you can edit any of the previous settings as needed."),
-          shiny::tags$p("2. You can continue coding where you left off in the previous session. In this case you will be able to add new coding variables, but you won't be able to change any other settings as this could lead to conflicts in the output."),
+          shiny::tags$p("2. You can continue coding where you left off in the previous session. You may change display columns and add new concepts to be coded. Existing concepts and other settings must be kept."),
           footer = shiny::tagList(
             shiny::actionButton("use_settings_template", "Import and edit settings for new session"),
             shiny::actionButton("continue_settings_session", "Continue previous session")
@@ -555,7 +555,7 @@ server <- function(input, output, session) {
       ),
       shiny::tags$p(
         class = "display-columns-help",
-        "The output file will always contains all columns from the input dataset."
+        "The output file includes the participant ID, selected display columns, and coding fields. Source columns keep their original order. Continuing a session updates the output to match this selection."
       )
     )
   })
