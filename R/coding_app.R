@@ -1,7 +1,6 @@
 required_packages <- c(
   "dplyr",
   "readxl",
-  "tcltk",
   "shiny",
   "DT",
   "stringr",
@@ -12,6 +11,22 @@ required_packages <- c(
 )
 
 invisible(lapply(required_packages, library, character.only = TRUE))
+
+
+choose_command_file <- function(command, args, cancel_status = NULL) {
+  error_path <- tempfile("file-picker-", fileext = ".log")
+  on.exit(unlink(error_path))
+  path <- suppressWarnings(system2(
+    command, args = args, stdout = TRUE, stderr = error_path
+  ))
+  status <- attr(path, "status")
+  if (!is.null(status) && status != 0) {
+    if (!is.null(cancel_status) && status == cancel_status) return(NULL)
+    details <- paste(readLines(error_path, warn = FALSE), collapse = "\n")
+    stop("The file picker could not be opened: ", details, call. = FALSE)
+  }
+  path
+}
 
 
 choose_tabular_file <- function(caption, json = FALSE) {
@@ -25,6 +40,8 @@ choose_tabular_file <- function(caption, json = FALSE) {
   )
   if (json) filters <- matrix(c("JSON settings files", "*.json", "All files", "*.*"),
                              ncol = 2, byrow = TRUE)
+  extensions <- if (json) "json" else c("csv", "xls", "xlsx")
+  system_name <- Sys.info()[["sysname"]]
 
   data_path <- if (.Platform$OS.type == "windows") {
     utils::choose.files(
@@ -33,12 +50,51 @@ choose_tabular_file <- function(caption, json = FALSE) {
       filters = filters,
       index = 1
     )
+  } else if (identical(system_name, "Darwin")) {
+    # Use the macOS dialog without requiring an X11 or Tcl/Tk installation.
+    script <- paste(
+      "on run argv",
+      "  try",
+      "    return POSIX path of (choose file with prompt (item 1 of argv) of type (items 2 thru -1 of argv))",
+      "  on error number -128",
+      "    return \"\"",
+      "  end try",
+      "end run",
+      sep = "\n"
+    )
+    choose_command_file(
+      "/usr/bin/osascript",
+      c("-e", shQuote(script), shQuote(c(caption, extensions)))
+    )
+  } else if (identical(system_name, "Linux") && nzchar(Sys.which("zenity"))) {
+    patterns <- paste0("*.", extensions, collapse = " ")
+    label <- if (json) "JSON settings files" else "CSV and Excel files"
+    choose_command_file(
+      Sys.which("zenity"),
+      shQuote(c(
+        "--file-selection",
+        paste0("--title=", caption),
+        paste0("--file-filter=", label, " | ", patterns),
+        "--file-filter=All files | *"
+      )),
+      cancel_status = 1L
+    )
   } else {
-    tcltk::tk_choose.files(
-      caption = caption,
-      multi = FALSE,
-      filters = filters,
-      index = 1
+    if (!isTRUE(capabilities("tcltk")) || !requireNamespace("tcltk", quietly = TRUE)) {
+      stop("A file picker requires Zenity or Tcl/Tk on this system.", call. = FALSE)
+    }
+    # Tk expects one extension per row, rather than Windows wildcard lists.
+    tk_filters <- rbind(
+      cbind(if (json) "JSON settings files" else "CSV and Excel files",
+            paste0(".", extensions)),
+      c("All files", "*")
+    )
+    tryCatch(
+      tcltk::tk_choose.files(caption = caption, multi = FALSE, filters = tk_filters),
+      error = function(error) stop(
+        "The file picker could not be opened. Install Zenity or enable Tcl/Tk with a desktop display: ",
+        conditionMessage(error), call. = FALSE
+      )
     )
   }
   if (
